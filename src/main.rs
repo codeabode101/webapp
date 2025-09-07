@@ -14,14 +14,32 @@ use tokio::net::{TcpListener, UnixListener};
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
+struct StudentClass {
+    class_id: i32,
+    status: String,
+    name: String,
+    relevance: Option<String>,
+    methods: Option<Vec<String>>,
+    stretch_methods: Option<Vec<String>>,
+    skills_tested: Option<Vec<String>>,
+    description: Option<String>,
+    classwork: Option<String>,
+    notes: Option<String>,
+    hw: Option<String>,
+    hw_notes: Option<String>
+}
+
+#[derive(Serialize)]
 struct Student {
+    id: i32,
     name: String,
     age: i32,
     current_level: String,
     final_goal: String,
     future_concepts: Vec<String>,
     notes: Option<String>,
+    classes: Vec<StudentClass>
 }
 
 #[derive(Debug, Deserialize)]
@@ -142,8 +160,7 @@ async fn get_student(
     cookie_jar: CookieJar,
     Path(id): Path<i32>,
 ) -> Result<String, StatusCode> {
-    match sqlx::query_as!(
-        Student,
+    match sqlx::query!(
         "SELECT name, age, current_level, final_goal, future_concepts, notes
         FROM students 
         WHERE account_id = (
@@ -157,8 +174,30 @@ async fn get_student(
         id
     ).fetch_optional(&**state).await {
         Ok(Some(row)) => {
-            return serde_json::to_string(&row)
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR);
+            // fetch the classes:
+            let classes = sqlx::query_as!(
+                StudentClass,
+                "SELECT class_id, status, name, relevance, methods, stretch_methods,
+                skills_tested, description, classwork, notes, hw, hw_notes
+                FROM students_classes 
+                WHERE student_id = $1",
+                id
+            )
+            .fetch_all(&**state)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            let student = Student {
+                id,
+                name: row.name,
+                age: row.age,
+                current_level: row.current_level,
+                final_goal: row.final_goal,
+                future_concepts: row.future_concepts,
+                notes: row.notes,
+                classes,
+            };
+            Ok(serde_json::to_string(&student).unwrap())
         },
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),

@@ -1,0 +1,84 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  DATABASE_URL: ${{ secrets.DB_URL }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Cargo Cache
+      uses: actions/cache@v4.2.4
+      with:
+        path: ~/.cargo
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          ${{ runner.os }}-cargo
+
+    - name: Cargo Target Cache
+      uses: actions/cache@v4.2.4
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.toml') }}
+          ${{ runner.os }}-cargo-target
+
+
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        cargo install sqlx-cli --no-default-features --features native-tls,postgres
+        sqlx database create
+        sqlx migrate run
+        cargo build --release 
+        mv target/release/webapp .
+
+    - name: SSH Remote Commands
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        timeout: 5m 
+        script: |
+          mkdir -p $HOME/codeabode/html
+          systemctl --user stop ily-rs
+
+    - name: Copy files via SSH
+      uses: appleboy/scp-action@v1
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        source: "html/*"
+        target: codeabode/
+        
+    - name: Copy files via SSH
+      uses: appleboy/scp-action@v1
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        source: "webapp"
+        target: codeabode/
+
+    - name: SSH Remote Commands
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        timeout: 5m 
+        script: |
+          systemctl --user start codeabode
+    

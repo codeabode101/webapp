@@ -2,6 +2,7 @@
 name = "webapp"
 version = "0.1.0"
 edition = "2024"
+default-run = "webapp"
 
 [dependencies]
 axum = { version = "0.8.4", features = ["macros"] }
