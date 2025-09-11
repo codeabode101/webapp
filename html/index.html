@@ -1,1 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Portal</title>
+
+  <style>
+    :root{
+      --bg:#0b1020; 
+      --panel:#121a33; 
+      --muted:#8ea1c2; 
+      --text:#e9eefc; 
+      --accent:#6aa5ff; 
+      --accent-2:#9ef0b8; 
+      --danger:#ff6b6b; 
+      --warn:#ffd166;
+      --card:#0f162d; 
+      --border:#1f2b4d;
+    }
+
+    *{ box-sizing:border-box }
+
+    html,body{ height:100% }
+
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:linear-gradient(180deg,#090d1a, #0d1530 40%, #0a132a);
+      color:var(--text)
+    }
+
+    a{ color:var(--accent); text-decoration:none }
+
+    .container{ max-width:1000px; margin:0 auto; padding:24px }
+
+    header{ display:flex; align-items:center; justify-content:space-between; gap:16px }
+
+    .title{ display:flex; align-items:center; gap:12px }
+
+    .logo{
+      width:36px; height:36px; border-radius:10px;
+      background:radial-gradient(circle at 30% 30%, var(--accent), #3d74ff 60%, #1d2a66);
+      box-shadow:0 6px 24px rgba(80,140,255,.35)
+    }
+
+    h1{ font-size:20px; margin:0 }
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:10px 14px; border-radius:12px; border:1px solid var(--border);
+      background:linear-gradient(180deg,#182245,#0e1633);
+      color:var(--text); cursor:pointer;
+      transition:transform .04s ease, filter .2s
+    }
+
+    .btn:hover{ filter:brightness(1.1) }
+
+    .btn:active{ transform:translateY(1px) }
+
+    .btn.primary{ background:linear-gradient(180deg,#2b68ff,#1f4de6); border-color:#2f5fff }
+
+    .btn.ghost{ background:transparent }
+
+    .btn.danger{ background:linear-gradient(180deg,#ff6b6b,#d95353); border-color:#ff7d7d }
+
+    .grid{ display:grid; gap:16px }
+
+    .two{ grid-template-columns:1fr 1fr }
+
+    @media (max-width: 860px){ .two{ grid-template-columns:1fr } }
+
+    .card{
+      background:linear-gradient(180deg,#101938,#0b1430);
+      border:1px solid var(--border); border-radius:16px;
+      box-shadow:0 8px 30px rgba(0,0,0,.25); padding:18px
+    }
+
+    .card h2{ margin:0 0 10px 0; font-size:16px; color:#cfe0ff }
+
+    .muted{ color:var(--muted); font-size:13px }
+
+    .stack{ display:flex; flex-direction:column; gap:10px }
+
+    .row{ display:flex; gap:10px; align-items:center }
+
+    input,textarea,select{
+      width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--border);
+      background:#0c1430; color:var(--text); outline:none
+    }
+
+    input:focus,textarea:focus{ border-color:#3d74ff; box-shadow:0 0 0 3px rgba(61,116,255,.2) }
+
+    label{ font-size:13px; color:#c6d6ff }
+
+    form .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:6px }
+
+    .list{ display:flex; flex-direction:column }
+
+    .list button{ justify-content:flex-start }
+
+    .badge{ display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:#0c1636; color:#cfe0ff; font-size:12px }
+
+    .badge.ok{ background:#0f2b1a; color:#baf5d1; border-color:#1e5b36 }
+
+    .badge.warn{ background:#2d2611; color:#ffe49a; border-color:#695719 }
+
+    .badge.fail{ background:#2c1216; color:#ffb5b5; border-color:#6b1e27 }
+
+    .hidden{ display:none }
+
+    .divider{ height:1px; background:linear-gradient(90deg,transparent, #25325a 30%, #25325a 70%, transparent); margin:8px 0 }
+
+    .code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:12px; color:#a9c1ff }
+
+    footer{ margin:28px 0 8px 0; color:#92a2c9; font-size:12px; text-align:center }
+
+    .notice{ padding:10px 12px; border:1px dashed #38509b; border-radius:12px; background:#0c1534; color:#cfe0ff }
+
+    .toast{ position:fixed; inset:auto 0 20px 0; display:flex; justify-content:center; pointer-events:none }
+
+    .toast > div{ pointer-events:auto; max-width:640px; background:#0c1736; border:1px solid var(--border); padding:12px 14px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.35) }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <header>
+      <div class="title">
+        <div class="logo"></div>
+        <h1>Student Portal</h1>
+      </div>
+
+      <div class="row" id="sessionActions">
+        <button class="btn ghost" id="btnCheck" onclick="bootstrap()">Check Session</button>
+        <button class="btn danger hidden" id="btnLogout" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="divider"></div>
+
+    <!-- Auth Panels -->
+    <section class="grid two" id="authViews">
+
+      <div class="card">
+        <h2>Login</h2>
+
+        <p class="muted">
+          Sign in to view your students. (This calls
+          <span class="code">POST /api/login</span>.)
+        </p>
+
+        <form class="stack" onsubmit="login(event)">
+          <div class="stack">
+            <label for="login_username">Username</label>
+            <input id="login_username" name="username" autocomplete="username" required />
+          </div>
+
+          <div class="stack">
+            <label for="login_password">Password</label>
+            <input id="login_password" type="password" name="password" autocomplete="current-password" required />
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="reset">Clear</button>
+            <button class="btn primary" type="submit">Login</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Reset Password</h2>
+
+        <p class="muted">
+          Update your password. (Calls
+          <span class="code">POST /api/reset-password</span>.)
+        </p>
+
+        <form class="stack" onsubmit="resetPassword(event)">
+          <div class="stack">
+            <label for="rp_username">Username</label>
+            <input id="rp_username" name="username" required />
+          </div>
+
+          <div class="stack">
+            <label for="rp_password">Current Password</label>
+            <input id="rp_password" type="password" name="password" required />
+          </div>
+
+          <div class="stack">
+            <label for="rp_new_password">New Password</label>
+            <input id="rp_new_password" type="password" name="new_password" required />
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="reset">Clear</button>
+            <button class="btn primary" type="submit">Change Password</button>
+          </div>
+        </form>
+
+        <p class="notice muted" style="margin-top:10px">
+          Note: your backend currently sets <span class="code">username</span>
+          and <span class="code">password</span> cookies in plain text.
+          Consider switching to server-side sessions and
+          <span class="code">HttpOnly; Secure</span> cookies with a signed token.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- App Panels -->
+    <section id="appViews" class="hidden">
+
+      <div class="grid two">
+
+        <div class="card">
+          <h2>Your Students</h2>
+
+          <div id="studentsEmpty" class="muted">No students yet or not authorized. Try logging in.</div>
+
+          <div id="studentsList" class="list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Details</h2>
+
+          <div id="studentDetail" class="muted">Select a student to view details.</div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <footer>
+      <div>Served by Axum • Static path: <span class="code">html/index.html</span></div>
+    </footer>
+
+  </div>
+
+  <div class="toast" id="toast" aria-live="polite"></div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+
+    const el = {
+      authViews: $('#authViews'),
+      appViews: $('#appViews'),
+      studentsList: $('#studentsList'),
+      studentsEmpty: $('#studentsEmpty'),
+      studentDetail: $('#studentDetail'),
+      btnLogout: $('#btnLogout'),
+      btnCheck: $('#btnCheck'),
+      toast: $('#toast')
+    };
+
+    function toast(msg, type='info'){
+      const box = document.createElement('div');
+      box.innerHTML = `<div>${msg}</div>`;
+      el.toast.innerHTML = '';
+      el.toast.appendChild(box);
+      setTimeout(()=>{ el.toast.innerHTML=''; }, 3200);
+    }
+
+    function showApp(loggedIn){
+      if(loggedIn){
+        el.authViews.classList.add('hidden');
+        el.appViews.classList.remove('hidden');
+        el.btnLogout.classList.remove('hidden');
+        el.btnCheck.classList.add('hidden');
+      }else{
+        el.authViews.classList.remove('hidden');
+        el.appViews.classList.add('hidden');
+        el.btnLogout.classList.add('hidden');
+        el.btnCheck.classList.remove('hidden');
+      }
+    }
+
+    async function login(e){
+      e.preventDefault();
+
+      const form = e.target;
+
+      const payload = {
+        username: form.username.value.trim(),
+        password: form.password.value
+      };
+
+      try{
+        const res = await fetch('/api/login',{
+          method:'POST', 
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+
+        if(res.ok){
+          toast('Login successful');
+          showApp(true);
+          await loadStudents();
+        }else{
+          toast(text || 'Login failed', 'error');
+          showApp(false);
+        }
+      }catch(err){ 
+        toast('Network error: '+ err.message, 'error'); 
+      }
+    }
+
+    async function resetPassword(e){
+      e.preventDefault();
+
+      const form = e.target;
+
+      const payload = {
+        username: form.username.value.trim(),
+        password: form.password.value,
+        new_password: form.new_password.value
+      };
+
+      try{
+        const res = await fetch('/api/reset-password',{
+          method:'POST', 
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+
+        if(res.ok){ 
+          toast(text || 'Password reset'); 
+          form.reset(); 
+        }
+        else{ 
+          toast(text || 'Could not reset password', 'error'); 
+        }
+      }catch(err){ 
+        toast('Network error: '+ err.message, 'error'); 
+      }
+    }
+
+    async function loadStudents(){
+      el.studentsList.innerHTML = '';
+      el.studentsEmpty.classList.remove('hidden');
+
+      try{
+        const res = await fetch('/api/list_students', { method:'POST' });
+
+        if(res.status === 401){ 
+          showApp(false); 
+          toast('Please login'); 
+          return; 
+        }
+
+        if(!res.ok){ 
+          toast('Failed to load students', 'error'); 
+          return; 
+        }
+
+        const items = await res.json();
+
+        if(!items || !items.length){ 
+          el.studentsEmpty.textContent = 'No students found.'; 
+          return; 
+        }
+
+        el.studentsEmpty.classList.add('hidden');
+
+        for(const s of items){
+          const btn = document.createElement('button');
+          btn.className = 'btn';
+          btn.textContent = `${s.id} · ${s.name}`;
+          btn.onclick = ()=> loadStudentDetail(s.id);
+          el.studentsList.appendChild(btn);
+        }
+      }catch(err){ 
+        toast('Network error: '+ err.message, 'error'); 
+      }
+    }
+
+    function safe(v){ 
+      return v==null? '—' : v; 
+    }
+
+    function renderList(list){
+      if(!list || !list.length) return '<span class="muted">—</span>';
+      return `<span class="code">${list.map(x=>escapeHtml(x)).join(', ')}</span>`;
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+    }
+
+    async function loadStudentDetail(id){
+      el.studentDetail.innerHTML = '<span class="muted">Loading…</span>';
+
+      try{
+        const res = await fetch(`/api/get_student/${id}`, { method:'POST' });
+
+        if(res.status === 404){ 
+          el.studentDetail.innerHTML = '<span class="muted">Student not found or not authorized.</span>'; 
+          return; 
+        }
+
+        if(res.status === 401){ 
+          showApp(false); 
+          toast('Please login'); 
+          return; 
+        }
+
+        const txt = await res.text();
+        let data; 
+
+        try { 
+          data = JSON.parse(txt); 
+        } catch { 
+          throw new Error('Invalid JSON from server'); 
+        }
+
+        renderStudent(data);
+      }catch(err){ 
+        el.studentDetail.innerHTML = `<span class="muted">Error: ${escapeHtml(err.message)}</span>`; 
+      }
+    }
+
+    function renderStudent(st){
+      const meta = `
+        <div class="grid two">
+          <div class="stack">
+            <div>
+              <span class="muted">Name</span><br/>
+              <strong>${escapeHtml(st.name)}</strong>
+            </div>
+
+            <div>
+              <span class="muted">Age</span><br/>
+              <span class="badge">${safe(st.age)}</span>
+            </div>
+
+            <div>
+              <span class="muted">Current Level</span><br/>
+              ${escapeHtml(st.current_level)}
+            </div>
+          </div>
+
+          <div class="stack">
+            <div>
+              <span class="muted">Final Goal</span><br/>
+              ${escapeHtml(st.final_goal)}
+            </div>
+
+            <div>
+              <span class="muted">Future Concepts</span><br/>
+              ${renderList(st.future_concepts)}
+            </div>
+
+            <div>
+              <span class="muted">Notes</span><br/>
+              ${escapeHtml(st.notes ?? '—')}
+            </div>
+          </div>
+        </div>`;
+
+      const classes = (st.classes || []).map(c=>{
+        const statusClass = c.status === 'completed' 
+          ? 'ok' 
+          : (c.status === 'upcoming' ? 'warn' : '');
+
+        return `
+          <div class="card" style="margin-top:10px">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <h2 style="margin:0">${escapeHtml(c.name)}</h2>
+              <span class="badge ${statusClass}">${escapeHtml(c.status)}</span>
+            </div>
+
+            <div class="grid two" style="margin-top:8px">
+              <div class="stack">
+                ${c.relevance ? `<div><span class="muted">Relevance</span><br/>${escapeHtml(c.relevance)}</div>` : ''}
+                ${c.methods ? `<div><span class="muted">Methods</span><br/>${renderList(c.methods)}</div>` : ''}
+                ${c.stretch_methods ? `<div><span class="muted">Stretch Methods</span><br/>${renderList(c.stretch_methods)}</div>` : ''}
+                ${c.skills_tested ? `<div><span class="muted">Skills Tested</span><br/>${renderList(c.skills_tested)}</div>` : ''}
+              </div>
+
+              <div class="stack">
+                ${c.description ? `<div><span class="muted">Description</span><br/>${escapeHtml(c.description)}</div>` : ''}
+                ${c.classwork ? `<div><span class="muted">Classwork</span><br/>${escapeHtml(c.classwork)}</div>` : ''}
+                ${c.hw ? `<div><span class="muted">Homework</span><br/>${escapeHtml(c.hw)}</div>` : ''}
+                ${c.hw_notes ? `<div><span class="muted">HW Notes</span><br/>${escapeHtml(c.hw_notes)}</div>` : ''}
+                ${c.notes ? `<div><span class="muted">Notes</span><br/>${escapeHtml(c.notes)}</div>` : ''}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      el.studentDetail.innerHTML = `
+        <div class="stack">
+          ${meta}
+
+          <div style="margin-top:8px">
+            <span class="muted">Classes</span>
+            ${classes || '<div class="muted" style="margin-top:6px">No classes yet.</div>'}
+          </div>
+        </div>`;
+    }
+
+    function logout(){
+      // Best-effort client-side cookie clear (cookies appear to be set without HttpOnly/SameSite attrs)
+      for (const k of ['username','password']){
+        document.cookie = `${k}=; Max-Age=0; path=/`;
+      }
+
+      showApp(false);
+      el.studentsList.innerHTML = '';
+      el.studentDetail.textContent = 'Select a student to view details.';
+      el.studentsEmpty.classList.remove('hidden');
+      toast('Logged out');
+    }
+
+    async function bootstrap(){
+      // Try hitting list_students to infer session
+      try{
+        const res = await fetch('/api/list_students', { method:'POST' });
+
+        if(res.ok){ 
+          showApp(true); 
+          await loadStudents(); 
+        }
+        else{ 
+          showApp(false); 
+        }
+      }catch{ 
+        showApp(false); 
+      }
+    }
+
+    // Auto-run
+    bootstrap();
+  </script>
+
+</body>
+</html>
 
