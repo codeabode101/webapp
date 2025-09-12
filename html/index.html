@@ -4,115 +4,117 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CodeAbode Student Tracker</title>
-
   <style>
     :root{
-      --bg:#0b1020; 
-      --panel:#121a33; 
-      --muted:#8ea1c2; 
-      --text:#e9eefc; 
-      --accent:#6aa5ff; 
-      --accent-2:#9ef0b8; 
-      --danger:#ff6b6b; 
-      --warn:#ffd166;
-      --card:#0f162d; 
-      --border:#1f2b4d;
+      --bg: #0a0e1a;
+      --surface: #0f162a;
+      --surface-2: #121c36;
+      --border: #1f2b4d;
+      --muted: #8da3c7;
+      --text: #eaf1ff;
+      --brand: #5c8aff;
+      --brand-2: #87b3ff;
+      --success: #2ecc71;
+      --warn: #ffd166;
+      --danger: #ff6b6b;
+      --shadow: 0 12px 28px rgba(0,0,0,.35);
+      --radius: 16px;
+      --pad: 14px;
     }
 
-    *{ box-sizing:border-box }
-
+    *{ box-sizing: border-box }
     html,body{ height:100% }
-
     body{
       margin:0;
-      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:linear-gradient(180deg,#090d1a, #0d1530 40%, #0a132a);
-      color:var(--text)
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 10% -10%, #0f1b3f30, transparent), radial-gradient(1000px 600px at 90% 0%, #0f1b3f25, transparent), linear-gradient(180deg,#0a0e1a,#0b1226 40%,#0a1228);
+      color: var(--text);
     }
 
-    a{ color:var(--accent); text-decoration:none }
+    /* Layout */
+    .shell{ max-width: 1100px; margin: 0 auto; padding: 28px; }
 
-    .container{ max-width:1000px; margin:0 auto; padding:24px }
-
-    header{ display:flex; align-items:center; justify-content:space-between; gap:16px }
-
-    .title{ display:flex; align-items:center; gap:12px }
-
-    .logo{
-      width:40px; height:40px; border-radius:12px;
-      background:radial-gradient(circle at 30% 30%, var(--accent), #3d74ff 60%, #1d2a66);
-      box-shadow:0 6px 24px rgba(80,140,255,.35)
+    header.topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
     }
 
-    h1{ font-size:22px; margin:0 }
-
-    .headline{ font-weight:600; letter-spacing:.2px }
-
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:10px 14px; border-radius:12px; border:1px solid var(--border);
-      background:linear-gradient(180deg,#182245,#0e1633);
-      color:var(--text); cursor:pointer;
-      transition:transform .04s ease, filter .2s
+    .brand{ display:flex; align-items:center; gap:12px }
+    .brand-mark{
+      width:44px;height:44px;border-radius:12px;
+      background: conic-gradient(from 200deg, #1e2e61, #3f63ff 45%, #2040ff 55%, #0f1c54 80%, #1e2e61);
+      box-shadow: 0 10px 30px rgba(65,110,255,.35), inset 0 0 0 1px #2a3a6a;
     }
+    .brand h1{ margin:0; font-size:22px; letter-spacing:.2px; font-weight:700 }
 
-    .btn:hover{ filter:brightness(1.1) }
-    .btn:active{ transform:translateY(1px) }
-    .btn.primary{ background:linear-gradient(180deg,#2b68ff,#1f4de6); border-color:#2f5fff }
+    .top-actions{ display:flex; gap:10px; align-items:center }
+
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:linear-gradient(180deg,#182245,#0e1633); color:var(--text); cursor:pointer; transition: filter .2s ease, transform .04s ease }
+    .btn:hover{ filter: brightness(1.08) }
+    .btn:active{ transform: translateY(1px) }
+    .btn.primary{ background:linear-gradient(180deg,#2d61ff,#234ce2); border-color:#2d61ff }
     .btn.ghost{ background:transparent }
     .btn.danger{ background:linear-gradient(180deg,#ff6b6b,#d95353); border-color:#ff7d7d }
 
-    .grid{ display:grid; gap:16px }
-    .two{ grid-template-columns:1fr 1fr }
-    @media (max-width: 860px){ .two{ grid-template-columns:1fr } }
+    .divider{ height:1px; margin:16px 0; background:linear-gradient(90deg,transparent,#24325a 25%, #24325a 75%, transparent) }
 
-    .card{
-      background:linear-gradient(180deg,#101938,#0b1430);
-      border:1px solid var(--border); border-radius:16px;
-      box-shadow:0 8px 30px rgba(0,0,0,.25); padding:18px
-    }
+    /* Cards & panes */
+    .card{ background: linear-gradient(180deg, var(--surface), #0b1430); border:1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .card-pad{ padding: 18px }
+    .card h2{ margin:0 0 10px 0; font-size:16px; color:#cfe0ff; font-weight:600 }
 
-    .card h2{ margin:0 0 10px 0; font-size:16px; color:#cfe0ff }
-    .muted{ color:var(--muted); font-size:13px }
+    .muted{ color: var(--muted) }
     .stack{ display:flex; flex-direction:column; gap:10px }
-    .row{ display:flex; gap:10px; align-items:center }
+    .row{ display:flex; align-items:center; gap:10px }
 
-    input,textarea,select{
-      width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--border);
-      background:#0c1430; color:var(--text); outline:none
-    }
-    input:focus,textarea:focus{ border-color:#3d74ff; box-shadow:0 0 0 3px rgba(61,116,255,.2) }
     label{ font-size:13px; color:#c6d6ff }
-    form .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:6px }
+    input, select, textarea{ width:100%; padding:12px; border-radius:12px; border:1px solid var(--border); background:#0c1430; color:var(--text); outline:none }
+    input:focus, select:focus, textarea:focus{ border-color:#3d74ff; box-shadow: 0 0 0 3px #3d74ff33 }
 
-    .list{ display:flex; flex-direction:column }
-    .list button{ justify-content:flex-start }
+    form .actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:6px }
 
-    .badge{ display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:#0c1636; color:#cfe0ff; font-size:12px }
-    .badge.ok{ background:#0f2b1a; color:#baf5d1; border-color:#1e5b36 }
-    .badge.warn{ background:#2d2611; color:#ffe49a; border-color:#695719 }
-    .badge.fail{ background:#2c1216; color:#ffb5b5; border-color:#6b1e27 }
+    /* Auth layout */
+    .auth-grid{ display:grid; grid-template-columns: 1.1fr .9fr .9fr; gap:16px }
+    @media (max-width: 980px){ .auth-grid{ grid-template-columns: 1fr } }
 
-    .hidden{ display:none }
+    /* App layout */
+    .app{ display:grid; grid-template-columns: 300px 1fr; gap:16px }
+    @media (max-width: 980px){ .app{ grid-template-columns: 1fr } }
 
-    .divider{ height:1px; background:linear-gradient(90deg,transparent, #25325a 30%, #25325a 70%, transparent); margin:8px 0 }
+    .sidebar{ background: linear-gradient(180deg, var(--surface), var(--surface-2)); border:1px solid var(--border); border-radius: var(--radius); overflow:hidden }
+    .sidebar-head{ padding: 14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center }
+    .search{ display:flex; gap:8px }
+    .search input{ flex:1 }
 
-    .code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:12px; color:#a9c1ff }
+    .student-list{ padding: 8px }
+    .item{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid transparent; border-radius:12px; cursor:pointer }
+    .item:hover{ background:#0e1738; border-color:#213160 }
 
-    footer{ margin:28px 0 8px 0; color:#92a2c9; font-size:12px; text-align:center }
+    .status{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); color:#cfe0ff }
+    .status.ok{ background:#0f2b1a; color:#baf5d1; border-color:#1e5b36 }
+    .status.warn{ background:#2d2611; color:#ffe49a; border-color:#695719 }
+
+    .detail{ background: linear-gradient(180deg, var(--surface), #0b1430); border:1px solid var(--border); border-radius: var(--radius) }
+    .detail-head{ padding:16px; border-bottom:1px solid var(--border) }
+    .detail-body{ padding:16px }
+
+    .two{ display:grid; grid-template-columns: 1fr 1fr; gap:16px }
+    @media (max-width: 980px){ .two{ grid-template-columns: 1fr } }
+
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; color:#a9c1ff }
+
+    .toast{ position:fixed; left:0; right:0; bottom:20px; display:flex; justify-content:center; pointer-events:none }
+    .toast > div{ pointer-events:auto; background:#0c1736; border:1px solid var(--border); padding:12px 14px; border-radius:12px; box-shadow: var(--shadow) }
   </style>
 </head>
-
 <body>
-  <div class="container">
+  <div class="shell">
 
-    <header>
-      <div class="title">
-        <div class="logo"></div>
-        <h1 class="headline">Welcome to CodeAbode Student Tracker</h1>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <h1>Welcome to CodeAbode Student Tracker</h1>
       </div>
-
-      <div class="row" id="sessionActions">
+      <div class="top-actions">
         <button class="btn ghost" id="btnCheck" onclick="bootstrap()">Check Session</button>
         <button class="btn danger hidden" id="btnLogout" onclick="logout()">Logout</button>
       </div>
@@ -120,10 +122,10 @@
 
     <div class="divider"></div>
 
-    <!-- Auth Panels -->
-    <section class="grid two" id="authViews">
+    
+    <section id="authViews" class="auth-grid">
 
-      <div class="card">
+      <div class="card card-pad">
         <h2>Create Account</h2>
         <form class="stack" onsubmit="signup(event)">
           <div class="stack">
@@ -149,7 +151,7 @@
         </form>
       </div>
 
-      <div class="card">
+      <div class="card card-pad">
         <h2>Login</h2>
         <form class="stack" onsubmit="login(event)">
           <div class="stack">
@@ -167,7 +169,7 @@
         </form>
       </div>
 
-      <div class="card">
+      <div class="card card-pad">
         <h2>Reset Password</h2>
         <form class="stack" onsubmit="resetPassword(event)">
           <div class="stack">
@@ -191,24 +193,32 @@
 
     </section>
 
-    <!-- App Panels -->
-    <section id="appViews" class="hidden">
-      <div class="grid two">
-        <div class="card">
-          <h2>Your Students</h2>
-          <div id="studentsEmpty" class="muted">No students yet or not authorized. Try logging in.</div>
-          <div id="studentsList" class="list"></div>
+    <!-- APP VIEWS -->
+    <section id="appViews" class="app hidden" aria-live="polite">
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <strong>Students</strong>
+          <div class="search" style="min-width:120px">
+            <input id="searchBox" placeholder="Search" oninput="filterStudents(this.value)" />
+          </div>
         </div>
-        <div class="card">
-          <h2>Details</h2>
-          <div id="studentDetail" class="muted">Select a student to view details.</div>
+        <div class="student-list" id="studentsList"></div>
+      </aside>
+
+      <!-- Detail -->
+      <article class="detail">
+        <div class="detail-head">
+          <h2 id="detailTitle" style="margin:0">Details</h2>
+          <div id="detailSub" class="muted" style="margin-top:6px">Select a student to view details.</div>
         </div>
-      </div>
+        <div class="detail-body" id="studentDetail"></div>
+      </article>
+
     </section>
 
-    <footer>
-      <div>© CodeAbode</div>
-    </footer>
+    <div id="studentsEmpty" class="muted" style="display:none; padding:8px 2px">No students yet.</div>
 
   </div>
 
@@ -223,17 +233,19 @@
       studentsList: $('#studentsList'),
       studentsEmpty: $('#studentsEmpty'),
       studentDetail: $('#studentDetail'),
+      detailTitle: $('#detailTitle'),
+      detailSub: $('#detailSub'),
       btnLogout: $('#btnLogout'),
       btnCheck: $('#btnCheck'),
       toast: $('#toast')
     };
 
-    function toast(msg, type='info'){
+    function toast(msg){
       const box = document.createElement('div');
-      box.innerHTML = `<div>${msg}</div>`;
+      box.innerHTML = `<div>${escapeHtml(msg)}</div>`;
       el.toast.innerHTML = '';
       el.toast.appendChild(box);
-      setTimeout(()=>{ el.toast.innerHTML=''; }, 3200);
+      setTimeout(()=>{ el.toast.innerHTML=''; }, 3000);
     }
 
     function showApp(loggedIn){
@@ -247,17 +259,16 @@
         el.appViews.classList.add('hidden');
         el.btnLogout.classList.add('hidden');
         el.btnCheck.classList.remove('hidden');
+        el.studentDetail.innerHTML = '';
       }
     }
 
+    // --- AUTH FLOWS ---
     async function signup(e){
       e.preventDefault();
       const form = e.target;
 
-      if(form.password.value !== form.confirm.value){
-        toast('Passwords do not match', 'error');
-        return;
-      }
+      if(form.password.value !== form.confirm.value){ toast('Passwords do not match'); return; }
 
       const payload = {
         name: form.name.value.trim(),
@@ -267,174 +278,114 @@
 
       try{
         const res = await fetch('/api/create_account',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
         });
         const text = await res.text();
-        if(res.ok){
-          toast('Account created. You can now log in.');
-          form.reset();
-        }else{
-          toast(text || 'Could not create account', 'error');
-        }
-      }catch(err){
-        toast('Network error: ' + err.message, 'error');
-      }
+        if(res.ok){ toast('Account created. You can login now.'); form.reset(); }
+        else{ toast(text || 'Could not create account'); }
+      }catch(err){ toast('Network error: '+ err.message); }
     }
 
     async function login(e){
       e.preventDefault();
       const form = e.target;
-      const payload = {
-        username: form.username.value.trim(),
-        password: form.password.value
-      };
+      const payload = { username: form.username.value.trim(), password: form.password.value };
       try{
-        const res = await fetch('/api/login',{
-          method:'POST', 
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
+        const res = await fetch('/api/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         const text = await res.text();
-        if(res.ok){
-          toast('Login successful');
-          showApp(true);
-          await loadStudents();
-        }else{
-          toast(text || 'Login failed', 'error');
-          showApp(false);
-        }
-      }catch(err){ 
-        toast('Network error: '+ err.message, 'error'); 
-      }
+        if(res.ok){ toast('Logged in'); showApp(true); await loadStudents(); }
+        else{ toast(text || 'Login failed'); showApp(false); }
+      }catch(err){ toast('Network error: '+ err.message); }
     }
 
     async function resetPassword(e){
       e.preventDefault();
       const form = e.target;
-      const payload = {
-        username: form.username.value.trim(),
-        password: form.password.value,
-        new_password: form.new_password.value
-      };
+      const payload = { username: form.username.value.trim(), password: form.password.value, new_password: form.new_password.value };
       try{
-        const res = await fetch('/api/reset-password',{
-          method:'POST', 
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
+        const res = await fetch('/api/reset-password',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         const text = await res.text();
-        if(res.ok){ 
-          toast(text || 'Password reset'); 
-          form.reset(); 
-        }
-        else{ 
-          toast(text || 'Could not reset password', 'error'); 
-        }
-      }catch(err){ 
-        toast('Network error: '+ err.message, 'error'); 
-      }
+        if(res.ok){ toast(text || 'Password reset'); form.reset(); }
+        else{ toast(text || 'Could not reset password'); }
+      }catch(err){ toast('Network error: '+ err.message); }
     }
+
+    // --- STUDENTS LIST ---
+    let _allStudents = [];
 
     async function loadStudents(){
       el.studentsList.innerHTML = '';
-      el.studentsEmpty.classList.remove('hidden');
+      el.studentsEmpty.style.display = 'none';
       try{
         const res = await fetch('/api/list_students', { method:'POST' });
-        if(res.status === 401){ 
-          showApp(false); 
-          toast('Please login'); 
-          return; 
-        }
-        if(!res.ok){ 
-          toast('Failed to load students', 'error'); 
-          return; 
-        }
+        if(res.status === 401){ showApp(false); toast('Please login'); return; }
+        if(!res.ok){ toast('Failed to load students'); return; }
         const items = await res.json();
-        if(!items || !items.length){ 
-          el.studentsEmpty.textContent = 'No students found.'; 
-          return; 
-        }
-        el.studentsEmpty.classList.add('hidden');
-        for(const s of items){
-          const btn = document.createElement('button');
-          btn.className = 'btn';
-          btn.textContent = `${s.id} · ${s.name}`;
-          btn.onclick = ()=> loadStudentDetail(s.id);
-          el.studentsList.appendChild(btn);
-        }
-      }catch(err){ 
-        toast('Network error: '+ err.message, 'error'); 
+        _allStudents = Array.isArray(items) ? items : [];
+        if(!_allStudents.length){ el.studentsEmpty.style.display='block'; return; }
+        renderStudents(_allStudents);
+      }catch(err){ toast('Network error: '+ err.message); }
+    }
+
+    function renderStudents(list){
+      el.studentsList.innerHTML = '';
+      for(const s of list){
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.innerHTML = `<div><strong>${escapeHtml(s.name)}</strong><div class="muted mono">ID ${s.id}</div></div>`;
+        row.onclick = ()=> loadStudentDetail(s.id);
+        el.studentsList.appendChild(row);
       }
     }
 
-    function safe(v){ return v==null? '—' : v; }
-
-    function renderList(list){
-      if(!list || !list.length) return '<span class="muted">—</span>';
-      return `<span class="code">${list.map(x=>escapeHtml(x)).join(', ')}</span>`;
-    }
-
-    function escapeHtml(s){
-      return String(s).replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+    function filterStudents(q){
+      q = (q || '').toLowerCase();
+      renderStudents(_allStudents.filter(s => s.name.toLowerCase().includes(q) || String(s.id).includes(q)));
     }
 
     async function loadStudentDetail(id){
-      el.studentDetail.innerHTML = '<span class="muted">Loading…</span>';
+      el.detailTitle.textContent = 'Details';
+      el.detailSub.textContent = 'Loading…';
+      el.studentDetail.innerHTML = '';
       try{
         const res = await fetch(`/api/get_student/${id}`, { method:'POST' });
-        if(res.status === 404){ el.studentDetail.innerHTML = '<span class="muted">Student not found or not authorized.</span>'; return; }
+        if(res.status === 404){ el.detailSub.textContent = 'Student not found or not authorized.'; return; }
         if(res.status === 401){ showApp(false); toast('Please login'); return; }
         const txt = await res.text();
-        let data; 
-        try { data = JSON.parse(txt); } catch { throw new Error('Invalid JSON from server'); }
+        let data; try{ data = JSON.parse(txt); } catch { throw new Error('Invalid JSON from server'); }
         renderStudent(data);
-      }catch(err){ el.studentDetail.innerHTML = `<span class="muted">Error: ${escapeHtml(err.message)}</span>`; }
+      }catch(err){ el.detailSub.textContent = err.message; }
     }
 
+    function safe(v){ return v==null? '—' : v; }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c])); }
+    function renderList(list){ if(!list || !list.length) return '<span class="muted">—</span>'; return `<span class="mono">${list.map(x=>escapeHtml(x)).join(', ')}</span>`; }
+
     function renderStudent(st){
+      el.detailTitle.textContent = st.name || 'Student';
+      el.detailSub.textContent = `ID ${st.id}`;
+
       const meta = `
-        <div class="grid two">
+        <div class="two">
           <div class="stack">
-            <div>
-              <span class="muted">Name</span><br/>
-              <strong>${escapeHtml(st.name)}</strong>
-            </div>
-            <div>
-              <span class="muted">Age</span><br/>
-              <span class="badge">${safe(st.age)}</span>
-            </div>
-            <div>
-              <span class="muted">Current Level</span><br/>
-              ${escapeHtml(st.current_level)}
-            </div>
+            <div><span class="muted">Age</span><br/><span class="status">${safe(st.age)}</span></div>
+            <div><span class="muted">Current Level</span><br/>${escapeHtml(st.current_level)}</div>
           </div>
           <div class="stack">
-            <div>
-              <span class="muted">Final Goal</span><br/>
-              ${escapeHtml(st.final_goal)}
-            </div>
-            <div>
-              <span class="muted">Future Concepts</span><br/>
-              ${renderList(st.future_concepts)}
-            </div>
-            <div>
-              <span class="muted">Notes</span><br/>
-              ${escapeHtml(st.notes ?? '—')}
-            </div>
+            <div><span class="muted">Final Goal</span><br/>${escapeHtml(st.final_goal)}</div>
+            <div><span class="muted">Future Concepts</span><br/>${renderList(st.future_concepts)}</div>
           </div>
         </div>`;
 
       const classes = (st.classes || []).map(c=>{
         const statusClass = c.status === 'completed' ? 'ok' : (c.status === 'upcoming' ? 'warn' : '');
         return `
-          <div class="card" style="margin-top:10px">
+          <div class="card card-pad" style="margin-top:10px">
             <div class="row" style="justify-content:space-between;align-items:center">
-              <h2 style="margin:0">${escapeHtml(c.name)}</h2>
-              <span class="badge ${statusClass}">${escapeHtml(c.status)}</span>
+              <strong>${escapeHtml(c.name)}</strong>
+              <span class="status ${statusClass}">${escapeHtml(c.status)}</span>
             </div>
-            <div class="grid two" style="margin-top:8px">
+            <div class="two" style="margin-top:8px">
               <div class="stack">
                 ${c.relevance ? `<div><span class="muted">Relevance</span><br/>${escapeHtml(c.relevance)}</div>` : ''}
                 ${c.methods ? `<div><span class="muted">Methods</span><br/>${renderList(c.methods)}</div>` : ''}
@@ -463,13 +414,12 @@
     }
 
     function logout(){
-      for (const k of ['username','password']){
-        document.cookie = `${k}=; Max-Age=0; path=/`;
-      }
+      for (const k of ['username','password']){ document.cookie = `${k}=; Max-Age=0; path=/`; }
       showApp(false);
       el.studentsList.innerHTML = '';
-      el.studentDetail.textContent = 'Select a student to view details.';
-      el.studentsEmpty.classList.remove('hidden');
+      el.studentDetail.innerHTML = '';
+      el.detailTitle.textContent = 'Details';
+      el.detailSub.textContent = 'Select a student to view details.';
       toast('Logged out');
     }
 
@@ -483,6 +433,5 @@
 
     bootstrap();
   </script>
-
 </body>
 </html>
