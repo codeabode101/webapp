@@ -1,1 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeAbode WebApp</title>
+  <style>
+    :root {
+      --bg: #001533; /
+      --panel: #121a33;
+      --panel-2: #0f1730;
+      --text: #e9eefc;
+      --accent: #6aa5ff;
+      --accent-2: #9ef0b8;
+      --muted: #8ea1c2;
+      --danger: #ff6a6a;
+      --ok: #26d07c;
+      --warning: #ffcc66;
+      --border: #22315f;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header {
+      background: radial-gradient(120% 120% at 0% 0%, #15234d 0%, var(--panel) 60%, #0d1530 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 1rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      box-shadow: 0 2px 18px rgba(0,0,0,.35);
+    }
+    header h1 { margin: 0; font-size: 1.75rem; letter-spacing: .3px; color: var(--accent); }
+    header p { margin: .35rem 0 0; color: var(--muted); font-size: .95rem; }
+
+    main {
+      width: min(100%, 1000px);
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    }
+    .card h2 { margin: 0 0 .75rem; color: var(--accent); font-size: 1.2rem; }
+    .card p.small { color: var(--muted); margin: .25rem 0 1rem; font-size: .9rem; }
+
+    form { display: grid; gap: .8rem; }
+    label { font-size: .9rem; color: var(--muted); }
+    input[type="text"], input[type="password"], input[type="number"], input[type="search"] {
+      padding: .65rem .75rem; border-radius: 8px; border: 1px solid var(--border);
+      background: #101939; color: var(--text);
+    }
+    button {
+      appearance: none; border: none; border-radius: 10px; padding: .7rem .9rem; cursor: pointer;
+      background: var(--accent); color: #fff; font-weight: 700; letter-spacing: .2px; transition: transform .02s ease, box-shadow .2s ease;
+      box-shadow: 0 6px 18px rgba(106,165,255,.35);
+    }
+    button:hover { box-shadow: 0 6px 22px rgba(106,165,255,.5); }
+    button:active { transform: translateY(1px); }
+    .btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); box-shadow: none; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+
+    .status {
+      margin-top: .5rem; font-size: .92rem; padding: .6rem .7rem; border-radius: 10px;
+      background: rgba(255,255,255,.03); border: 1px dashed var(--border); color: var(--muted);
+    }
+    .status.ok { color: #d8ffe9; border-color: rgba(38,208,124,.35); background: rgba(38,208,124,.08); }
+    .status.err { color: #ffe2e2; border-color: rgba(255,106,106,.35); background: rgba(255,106,106,.08); }
+    .status.warn { color: #fff2d6; border-color: rgba(255,204,102,.35); background: rgba(255,204,102,.08); }
+
+    .students, .student-detail { font-size: .95rem; }
+    .students ul { list-style: none; padding: 0; margin: .5rem 0 0; }
+    .students li { padding: .5rem .6rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: .5rem; background: #0f1836; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+    .students li button { padding: .45rem .65rem; border-radius: 8px; font-weight: 600; }
+    .empty { color: var(--muted); font-style: italic; }
+
+    .progress-card { grid-column: 1 / -1; text-align: center; padding: 1.5rem; }
+    .progress-card h2 { color: var(--accent-2); font-size: 1.3rem; }
+    .meter { height: 12px; background: #0e1630; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); margin-top: .75rem; }
+    .meter > span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-2), #6ef3ff); transition: width .6s ease; }
+
+    footer { color: var(--muted); text-align: center; padding: 1rem; border-top: 1px solid var(--border); }
+    .hide { display: none !important; }
+    /* New chips & progress bar */
+    .chip { display:inline-block; padding:.2rem .5rem; border:1px solid var(--border); border-radius:999px; font-size:.8rem; color:var(--text); background: rgba(255,255,255,.04); }
+    .chip-soft { color: var(--accent-2); border-color: rgba(158,240,184,.3); background: rgba(158,240,184,.08); }
+    .pbar { height: 10px; background:#0e1630; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+    .pbar > span { display:block; height:100%; width:0; background: linear-gradient(90deg, var(--accent-2), #6ef3ff); transition: width .4s ease; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Welcome to CodeAbode WebApp</h1>
+    <p>Sign in and view your students!</p>
+  </header>
+
+  <main>
+    <!-- LOGIN CARD -->
+    <section class="card" id="login-card">
+      <h2>Login</h2>
+      <p class="small">Use your CodeAbode account credentials.</p>
+      <form id="login-form">
+        <label for="login-username">Username</label>
+        <input id="login-username" name="username" type="text" autocomplete="username" required />
+
+        <label for="login-password">Password</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+
+        <div class="row">
+          <button type="submit">Login</button>
+          <button type="button" class="btn-secondary" id="logout-btn" title="Clears cookies client-side (for demo)">Logout</button>
+        </div>
+      </form>
+      <div id="login-status" class="status">Not signed in.</div>
+    </section>
+
+    <!-- CHANGE PASSWORD CARD -->
+    <section class="card" id="change-card">
+      <h2>Change Password</h2>
+      <p class="small">Enter your username, current password, and a new password.</p>
+      <form id="change-form">
+        <label for="cp-username">Username</label>
+        <input id="cp-username" name="username" type="text" required />
+
+        <label for="cp-current">Current Password</label>
+        <input id="cp-current" name="password" type="password" required />
+
+        <label for="cp-new">New Password</label>
+        <input id="cp-new" name="new_password" type="password" required />
+
+        <button type="submit">Update Password</button>
+      </form>
+      <div id="change-status" class="status">—</div>
+    </section>
+
+    <!-- STUDENTS CARD -->
+    <section class="card students" id="students-card">
+      <h2>Your Students</h2>
+      <p class="small">Requires login (cookies). Uses <code>/api/list_students</code> and <code>/api/get_student/{id}</code>.</p>
+
+      <div class="row">
+        <button id="refresh-students">Load / Refresh Students</button>
+        <input id="student-search" type="search" placeholder="Filter by name…" />
+      </div>
+
+      <ul id="students-list"><li class="empty">No data yet. Click “Load / Refresh Students”.</li></ul>
+
+      <div class="student-detail hide" id="student-detail"></div>
+
+      <div id="students-status" class="status warn">You may need to login first.</div>
+    </section>
+
+    
+    <section class="card progress-card">
+      <h2>🚀 CodeAbode Strong Progress</h2>
+      <p class="small">Keep learning, building, and growing stronger every day!</p>
+      <div class="meter" aria-label="progress"><span id="progress-bar" style="width: 0%"></span></div>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="year"></span> 
+  </footer>
+
+  <script>
+    
+    const qs = (sel, el = document) => el.querySelector(sel);
+    const qsa = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+
+    function setStatus(el, text, kind = "") {
+      el.classList.remove("ok", "err", "warn");
+      if (kind) el.classList.add(kind);
+      el.textContent = text;
+    }
+
+   
+    function getCookie(name) {
+      return document.cookie
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith(name + "="))?.split("=")[1];
+    }
+
+    function updateLoginUI() {
+      const u = getCookie("username");
+      const loginStatus = qs('#login-status');
+      if (u) {
+        setStatus(loginStatus, `Signed in as “${decodeURIComponent(u)}”.`, 'ok');
+        qs('#students-status').classList.remove('warn');
+        setStatus(qs('#students-status'), 'Authenticated. You can load students now.', 'ok');
+      } else {
+        setStatus(loginStatus, 'Not signed in.', 'warn');
+        setStatus(qs('#students-status'), 'You may need to login first.', 'warn');
+      }
+    }
+
+    
+    qs('#login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = qs('#login-username').value.trim();
+      const password = qs('#login-password').value;
+      const statusEl = qs('#login-status');
+      setStatus(statusEl, 'Signing in…');
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ username, password })
+        });
+        const text = await res.text();
+        if (res.ok) {
+          setStatus(statusEl, text || 'Login successful', 'ok');
+          updateLoginUI();
+        } else if (res.status === 401) {
+          setStatus(statusEl, 'Incorrect password.', 'err');
+        } else {
+          setStatus(statusEl, `Login failed: ${text}`, 'err');
+        }
+      } catch (err) {
+        setStatus(statusEl, 'Network error. See console.', 'err');
+        console.error(err);
+      }
+    });
+
+   
+    qs('#logout-btn').addEventListener('click', () => {
+      document.cookie = 'username=; Max-Age=0; path=/';
+      document.cookie = 'password=; Max-Age=0; path=/';
+      updateLoginUI();
+      qs('#students-list').innerHTML = '<li class="empty">Logged out. Student list cleared.</li>';
+      qs('#student-detail').classList.add('hide');
+    });
+
+    // ---------- CHANGE PASSWORD ----------
+    qs('#change-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = qs('#cp-username').value.trim();
+      const password = qs('#cp-current').value;
+      const new_password = qs('#cp-new').value;
+      const statusEl = qs('#change-status');
+      setStatus(statusEl, 'Updating password…');
+
+      try {
+        const res = await fetch('/api/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ username, password, new_password })
+        });
+        const text = await res.text();
+        if (res.ok) {
+          setStatus(statusEl, text || 'Password updated successfully.', 'ok');
+        } else if (res.status === 401) {
+          setStatus(statusEl, 'Incorrect password.', 'err');
+        } else {
+          setStatus(statusEl, `Update failed: ${text}`, 'err');
+        }
+      } catch (err) {
+        setStatus(statusEl, 'Network error. See console.', 'err');
+        console.error(err);
+      }
+    });
+
+    // ---------- STUDENTS (LIST + DETAIL) ----------
+    const listEl = qs('#students-list');
+    const detailEl = qs('#student-detail');
+    let students = [];
+
+    async function loadStudents() {
+      setStatus(qs('#students-status'), 'Loading students…');
+      detailEl.classList.add('hide');
+      try {
+        const res = await fetch('/api/list_students', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        if (!res.ok) {
+          if (res.status === 401) {
+            setStatus(qs('#students-status'), 'Unauthorized. Please login first.', 'warn');
+          } else {
+            const text = await res.text();
+            setStatus(qs('#students-status'), `Failed: ${text}`, 'err');
+          }
+          return;
+        }
+        students = await res.json();
+        renderStudents(students);
+        setStatus(qs('#students-status'), 'Loaded.', 'ok');
+      } catch (err) {
+        setStatus(qs('#students-status'), 'Network error. See console.', 'err');
+        console.error(err);
+      }
+    }
+
+    function renderStudents(items) {
+      if (!items?.length) {
+        listEl.innerHTML = '<li class="empty">No students found.</li>';
+        return;
+      }
+      listEl.innerHTML = '';
+      for (const s of items) {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span><strong>#${s.id}</strong> — ${escapeHtml(s.name)}</span>
+          <span>
+            <button data-id="${s.id}" class="view-btn">View</button>
+          </span>`;
+        listEl.appendChild(li);
+      }
+      qsa('.view-btn', listEl).forEach(btn => btn.addEventListener('click', () => viewStudent(btn.dataset.id)));
+    }
+
+    async function viewStudent(id) {
+      setStatus(qs('#students-status'), `Loading student #${id}…`);
+      try {
+        const res = await fetch(`/api/get_student/${encodeURIComponent(id)}`, {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          setStatus(qs('#students-status'), `Failed: ${text}`, 'err');
+          return;
+        }
+        const data = await res.json();
+        detailEl.classList.remove('hide');
+        detailEl.innerHTML = renderStudentDetail(data);
+        setStatus(qs('#students-status'), 'Loaded.', 'ok');
+      } catch (err) {
+        setStatus(qs('#students-status'), 'Network error. See console.', 'err');
+        console.error(err);
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+ 
+    function computeStudentSummary(s) {
+      const classes = s.classes || [];
+      const total = classes.length;
+      let completed = 0;
+      let methods = 0, stretch = 0, skills = 0;
+      for (const c of classes) {
+        const st = (c.status || '').toLowerCase();
+        if (st === 'completed' || st === 'done' || st === 'finished') completed++;
+        methods += (c.methods || []).length;
+        stretch += (c.stretch_methods || []).length;
+        skills  += (c.skills_tested || []).length;
+      }
+      const percent = total ? Math.round((completed/total)*100) : 0;
+      return { total, completed, percent, methods, stretch, skills };
+    }
+
+    function renderStudentDetail(s) {
+      const summary = computeStudentSummary(s);
+      const cls = (s.classes || []).map(c => `
+        <li>
+          <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+            <strong>${escapeHtml(c.name)}</strong>
+            <span class="chip">${escapeHtml(c.status)}</span>
+            ${c.methods?.length ? `<span class="chip chip-soft">${c.methods.length} methods</span>` : ''}
+            ${c.stretch_methods?.length ? `<span class=\"chip chip-soft\">${c.stretch_methods.length} stretch</span>` : ''}
+            ${c.skills_tested?.length ? `<span class=\"chip chip-soft\">${c.skills_tested.length} skills</span>` : ''}
+          </div>
+          ${c.relevance ? `<div>Relevance: ${escapeHtml(c.relevance)}</div>` : ''}
+          ${c.methods?.length ? `<div>Methods: ${c.methods.map(escapeHtml).join(', ')}</div>` : ''}
+          ${c.stretch_methods?.length ? `<div>Stretch: ${c.stretch_methods.map(escapeHtml).join(', ')}</div>` : ''}
+          ${c.skills_tested?.length ? `<div>Skills: ${c.skills_tested.map(escapeHtml).join(', ')}</div>` : ''}
+          ${c.description ? `<div>Description: ${escapeHtml(c.description)}</div>` : ''}
+          ${c.classwork ? `<div>Classwork: ${escapeHtml(c.classwork)}</div>` : ''}
+          ${c.notes ? `<div>Notes: ${escapeHtml(c.notes)}</div>` : ''}
+          ${c.hw ? `<div>HW: ${escapeHtml(c.hw)}</div>` : ''}
+          ${c.hw_notes ? `<div>HW Notes: ${escapeHtml(c.hw_notes)}</div>` : ''}
+        </li>
+      `).join('');
+
+      return `
+        <div class="card" style="margin-top:1rem">
+          <h2>Student Detail</h2>
+          <div class="small" style="color:var(--muted)">ID #${s.id}</div>
+          <div style="margin-top:.75rem; display:grid; gap:.35rem">
+            <div><strong>Name:</strong> ${escapeHtml(s.name)}</div>
+            <div><strong>Age:</strong> ${s.age}</div>
+            <div><strong>Current Level:</strong> ${escapeHtml(s.current_level)}</div>
+            <div><strong>Final Goal:</strong> ${escapeHtml(s.final_goal)}</div>
+            <div><strong>Future Concepts:</strong> ${(s.future_concepts||[]).map(escapeHtml).join(', ') || '—'}</div>
+            <div><strong>Notes:</strong> ${s.notes ? escapeHtml(s.notes) : '—'}</div>
+          </div>
+
+          <div class="pbar-wrap" style="margin-top:1rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+              <div class="small" style="color:var(--muted)">Overall Progress</div>
+              <div class="small"><strong>${summary.completed}/${summary.total}</strong> (${summary.percent}%)</div>
+            </div>
+            <div class="pbar"><span style="width:${summary.percent}%"></span></div>
+            <div style="display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap">
+              <span class="chip chip-soft">${summary.methods} methods</span>
+              <span class="chip chip-soft">${summary.stretch} stretch</span>
+              <span class="chip chip-soft">${summary.skills} skills</span>
+            </div>
+          </div>
+
+          <hr style="border:0;border-top:1px solid var(--border);margin:1rem 0"/>
+          <h3 style="margin:.2rem 0 0.5rem">Classes</h3>
+          ${cls ? `<ul style="list-style:none;padding:0;margin:.4rem 0 0;display:grid;gap:.6rem">${cls}</ul>` : '<div class="empty">No classes found.</div>'}
+        </div>
+      `;
+    }
+
+    
+    qs('#student-search').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = students.filter(s => s.name.toLowerCase().includes(q));
+      renderStudents(filtered);
+    });
+
+    qs('#refresh-students').addEventListener('click', loadStudents);
+
+
+    function animateProgress() {
+      const bar = qs('#progress-bar');
+      const target = 70 + Math.random()*25; // 70-95%
+      setTimeout(() => { bar.style.width = target.toFixed(0) + '%'; }, 300);
+    }
+
+    // Init
+    (function init(){
+      qs('#year').textContent = new Date().getFullYear();
+      updateLoginUI();
+      animateProgress();
+    })();
+  </script>
+</body>
+</html>
 
