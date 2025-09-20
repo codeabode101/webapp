@@ -441,13 +441,6 @@
     qs('#refresh-students').addEventListener('click', loadStudents);
 
 
-    function animateProgress() {
-      const bar = qs('#progress-bar');
-      const target = 70 + Math.random()*25; // 70-95%
-      setTimeout(() => { bar.style.width = target.toFixed(0) + '%'; }, 300);
-    }
-
-    // Init
     (function init(){
       qs('#year').textContent = new Date().getFullYear();
       updateLoginUI();
