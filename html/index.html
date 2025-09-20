@@ -100,12 +100,7 @@
 
     footer { color: var(--muted); text-align: center; padding: 1rem; border-top: 1px solid var(--border); }
     .hide { display: none !important; }
-    /* New chips & progress bar */
-    .chip { display:inline-block; padding:.2rem .5rem; border:1px solid var(--border); border-radius:999px; font-size:.8rem; color:var(--text); background: rgba(255,255,255,.04); }
-    .chip-soft { color: var(--accent-2); border-color: rgba(158,240,184,.3); background: rgba(158,240,184,.08); }
-    .pbar { height: 10px; background:#0e1630; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
-    .pbar > span { display:block; height:100%; width:0; background: linear-gradient(90deg, var(--accent-2), #6ef3ff); transition: width .4s ease; }
-  </style>
+   
 </head>
 <body>
   <header>x
@@ -114,7 +109,7 @@
   </header>
 
   <main>
-    <!-- LOGIN CARD -->
+    
     <section class="card" id="login-card">
       <h2>Login</h2>
       <p class="small">Use your CodeAbode account credentials.</p>
@@ -133,7 +128,7 @@
       <div id="login-status" class="status">Not signed in.</div>
     </section>
 
-    <!-- CHANGE PASSWORD CARD -->
+
     <section class="card" id="change-card">
       <h2>Change Password</h2>
       <p class="small">Enter your username, current password, and a new password.</p>
@@ -152,7 +147,7 @@
       <div id="change-status" class="status">—</div>
     </section>
 
-    <!-- STUDENTS CARD -->
+  
     <section class="card students" id="students-card">
       <h2>Your Students</h2>
       
@@ -248,7 +243,7 @@
       qs('#student-detail').classList.add('hide');
     });
 
-    // ---------- CHANGE PASSWORD ----------
+    
     qs('#change-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = qs('#cp-username').value.trim();
@@ -278,7 +273,7 @@
       }
     });
 
-    // ---------- STUDENTS (LIST + DETAIL) ----------
+    
     const listEl = qs('#students-list');
     const detailEl = qs('#student-detail');
     let students = [];
