@@ -105,7 +105,7 @@
 </head>
 <body>
   <header>
-    <h1>Welcome to CodeAbode WebApp</h1>
+    <h1 id="welcome-headline">Welcome to Codeabode</h1>
     <p>Sign in and view your students!</p>
   </header>
 
@@ -121,10 +121,7 @@
         <label for="login-password">Password</label>
         <input id="login-password" name="password" type="password" autocomplete="current-password" required />
 
-        <div class="row">
-          <button type="submit">Login</button>
-          <button type="button" class="btn-secondary" id="logout-btn" title="Clears cookies client-side (for demo)">Logout</button>
-        </div>
+        <button type="submit">Login</button>
       </form>
       <div id="login-status" class="status">Not signed in.</div>
     </section>

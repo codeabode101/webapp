@@ -1,5 +1,8 @@
 const qs = (sel, el = document) => el.querySelector(sel);
 const qsa = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+const loginForm = document.getElementById('login-card');
+const studentsList = document.getElementById('students-card');
+const welcomeHeadline = document.getElementById('welcome-headline');
 
 function hexToByteArray(hexx) {
     var hex = hexx.toString();
@@ -25,16 +28,23 @@ function getCookie(name) {
 }
 
 function updateLoginUI() {
-  const u = getCookie("username");
+  const u = getCookie("name");
   console.log(u);
   const loginStatus = qs('#login-status');
   if (u) {
     setStatus(loginStatus, `Signed in as “${decodeURIComponent(u)}”.`, 'ok');
     qs('#students-status').classList.remove('warn');
     setStatus(qs('#students-status'), 'Authenticated. You can load students now.', 'ok');
+    loginForm.style.display = 'none';
+    studentsList.style.display = 'block';
+    welcomeHeadline.textContent = `Welcome, ${decodeURIComponent(u)}!`;
+
   } else {
     setStatus(loginStatus, 'Not signed in.', 'warn');
     setStatus(qs('#students-status'), 'You may need to login first.', 'warn');
+    loginForm.style.display = 'block';
+    studentsList.style.display = 'none';
+    welcomeHeadline.textContent = 'Welcome to Codeabode!';
   }
 }
 
@@ -67,16 +77,6 @@ qs('#login-form').addEventListener('submit', async (e) => {
     console.error(err);
   }
 });
-
-
-qs('#logout-btn').addEventListener('click', () => {
-  document.cookie = 'username=; Max-Age=0; path=/';
-  document.cookie = 'password=; Max-Age=0; path=/';
-  updateLoginUI();
-  qs('#students-list').innerHTML = '<li class="empty">Logged out. Student list cleared.</li>';
-  qs('#student-detail').classList.add('hide');
-});
-
 
 qs('#change-form').addEventListener('submit', async (e) => {
   e.preventDefault();

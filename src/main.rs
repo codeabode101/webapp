@@ -96,41 +96,47 @@ async fn login(
     Json(body): Json<LoginRequest>,
 ) -> Result<(CookieJar, String), (StatusCode, String)> {
     match sqlx::query!(
-        "SELECT COUNT(*) as was_found
+        "SELECT name
         FROM accounts 
         WHERE username = $1 
         AND password = digest($2, 'sha512')",
         body.username,
         body.password
     )
-    .fetch_one(&**state).await {
-        Ok(row) => {
-            if row.was_found == Some(1) {
-                // don't use secure cookies because it has to work on localhost
-                Ok((
-                    jar
-                      .add(
-                          Cookie::build(("username", body.username))
-                            .same_site(SameSite::Strict)
-                            .max_age(Duration::days(30))
-                            .path("/")
-                      )
-                      .add(
-                          Cookie::build(("password", body.password))
-                            .http_only(true)
-                            .same_site(SameSite::Strict)
-                            .max_age(Duration::days(30))
-                            .path("/")
-                      ),
-                    "Login successful".to_string(),
-                ))
-            } else {
-                Err((
-                    StatusCode::UNAUTHORIZED,
-                    "Incorrect password".to_string()
-                ))
-            }
-        }
+    .fetch_optional(&**state).await {
+        Ok(Some(row)) => {
+            // don't use secure cookies because it has to work on localhost
+            Ok((
+                jar
+                  .add(
+                      Cookie::build(("username", body.username))
+                        .http_only(true)
+                        .same_site(SameSite::Strict)
+                        .max_age(Duration::days(30))
+                        .path("/")
+                  )
+                  .add(
+                      Cookie::build(("name", row.name))
+                        .same_site(SameSite::Strict)
+                        .max_age(Duration::days(30))
+                        .path("/")
+                  )
+                  .add(
+                      Cookie::build(("password", body.password))
+                        .http_only(true)
+                        .same_site(SameSite::Strict)
+                        .max_age(Duration::days(30))
+                        .path("/")
+                  ),
+                "Login successful".to_string(),
+            ))
+        },
+        Ok(None) => {
+            Err((
+                StatusCode::UNAUTHORIZED,
+                "Incorrect password".to_string()
+            ))
+        },
         Err(e) => {
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
