@@ -6,11 +6,12 @@ use axum::{
     routing::post, 
     http::StatusCode, 
     Router};
-use axum_extra::extract::cookie::{CookieJar, Cookie};
+use axum_extra::extract::cookie::{CookieJar, Cookie, SameSite};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
-use tokio::net::{TcpListener, UnixListener};
+use time::Duration;
+use tokio::net::{TcpListener, UnixListener}; 
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
 
@@ -105,10 +106,22 @@ async fn login(
     .fetch_one(&**state).await {
         Ok(row) => {
             if row.was_found == Some(1) {
+                // don't use secure cookies because it has to work on localhost
                 Ok((
                     jar
-                      .add(Cookie::new("username", body.username))
-                      .add(Cookie::new("password", body.password)),
+                      .add(
+                          Cookie::build(("username", body.username))
+                            .same_site(SameSite::Strict)
+                            .max_age(Duration::days(30))
+                            .path("/")
+                      )
+                      .add(
+                          Cookie::build(("password", body.password))
+                            .http_only(true)
+                            .same_site(SameSite::Strict)
+                            .max_age(Duration::days(30))
+                            .path("/")
+                      ),
                     "Login successful".to_string(),
                 ))
             } else {

@@ -1,5 +1,5 @@
 // this is meant to add a user to the database
-use bcrypt::hash;
+use clap::Command;
 use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::{
@@ -13,11 +13,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let db = PgPoolOptions::new().connect(&db_url).await?;
 
-    let bcrypt_cost: u32 = env::var("BCRYPT_COST")
-        .unwrap_or(String::from("10"))
-        .parse()
-        .unwrap_or(10);
+    let matches = Command::new("codeabode")
+        .subcommand(Command::new("add").about("Add a new user"))
+        .subcommand(Command::new("reset").about("Reset user password"))
+        .get_matches();
 
+    match matches.subcommand() {
+        Some(("add", _)) => add_user(db).await?,
+        Some(("reset", _)) => reset_pswd(db).await?,
+        _ => {
+            println!("No valid subcommand provided. Use 'add' or 'reset'.");
+        }
+    }
+    Ok(())
+}
+
+async fn add_user(
+    db: sqlx::PgPool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut username = String::new();
     get_response("Enter unique username", &mut username)?;
 
@@ -27,8 +40,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut password = String::new();
     get_response("Enter password", &mut password)?;
 
-    let password_hash = hash(password.trim(), bcrypt_cost)?;
-
     match sqlx::query!(
         "INSERT INTO accounts 
         (username, name, password) 
@@ -36,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         RETURNING id",
         username.trim(),
         name.trim(),
-        password_hash
+        password.trim()
     )
     .fetch_one(&db)
     .await {
@@ -90,6 +101,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         Err(e) => eprintln!("{}", e),
     }
+
+    Ok(())
+}
+
+async fn reset_pswd(
+    db: sqlx::PgPool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let students = sqlx::query!(
+        "SELECT id, username
+        FROM accounts"
+    )
+    .fetch_all(&db)
+    .await?;
+
+    let mut i = 0;
+    while i < students.len() {
+        println!("({}) {}: {}", i, students[i].id, students[i].username);
+        i += 1;
+    }
+
+    let mut id = String::new();
+    get_response("Num of password to reset", &mut id)?;
+    let id_int = id.trim().parse::<usize>()?;
+
+    let mut password = String::new();
+    get_response("Enter new password", &mut password)?;
+
+    let query = sqlx::query!(
+        "UPDATE accounts 
+        SET password = digest($1, 'sha512')
+        WHERE id = $2",
+        password.trim(),
+        students[id_int].id
+    )
+    .execute(&db)
+    .await?;
+
+    println!("{} rows affected", query.rows_affected());
 
     Ok(())
 }
