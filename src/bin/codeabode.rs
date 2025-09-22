@@ -7,6 +7,8 @@ use std::{
     io::{self, Write},
 };
 
+mod codeabode_lib;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -15,14 +17,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let matches = Command::new("codeabode")
         .subcommand(Command::new("add").about("Add a new user"))
-        .subcommand(Command::new("reset").about("Reset user password"))
+        .subcommand(Command::new("reset")
+                        .aliases(["r", "reset-password"])
+                        .about("Reset user password"))
+        .subcommand(Command::new("curriculum")
+                        .aliases(["curc", "c"])
+                        .about("Generate curriculum for new student"))
+        .subcommand(Command::new("classwork")
+                        .aliases(["cw", "w"])
+                        .about("Create classwork for upcoming class"))
+        .subcommand(Command::new("homework")
+                        .aliases(["hw", "h"])
+                        .about("Create classwork for upcoming class"))
+        .subcommand(Command::new("refine")
+                        .aliases(["refiner", "curc-refiner", "re"])
+                        .about("Create classwork for upcoming class"))
         .get_matches();
 
     match matches.subcommand() {
         Some(("add", _)) => add_user(db).await?,
         Some(("reset", _)) => reset_pswd(db).await?,
         _ => {
-            println!("No valid subcommand provided. Use 'add' or 'reset'.");
+            eprintln!("Invalid command, use run codeabode help");
         }
     }
     Ok(())
