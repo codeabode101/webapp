@@ -80,5 +80,5 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         timeout: 5m 
         script: |
-          systemctl --user start codeabode
+          systemctl --user restart codeabode
     
