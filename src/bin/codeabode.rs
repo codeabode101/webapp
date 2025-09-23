@@ -7,8 +7,6 @@ use std::{
     io::{self, Write},
 };
 
-mod codeabode_lib;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
