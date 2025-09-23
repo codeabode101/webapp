@@ -8,6 +8,12 @@ git clone https://github.com/codeabode101/webapp.git
 cd webapp
 ```
 
+## Demo
+To see how it works, use the demo user:
+
+Username: demo
+Password: demo
+
 ## Building
 
 Add the `DATABASE_URL` in your `.env` file, it is also necessary during compile time for `sqlx`.
