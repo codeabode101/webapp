@@ -14,6 +14,13 @@ To see how it works, use the demo user:
 Username: demo
 Password: demo
 
+## Usage
+You are **not** supposed to be able to register for accounts. Using the cli tool in bin, you will be able to add people who can access a particular student by running `cargo run --bin codeabode add` or simply running the binary. 
+
+Demo user cannot reset password.
+
+The objective is for the person with the account (i.e. the parent of the kid learning) can VIEW information about the student. However, they cannot change any information about the student.
+
 ## Building
 
 Add the `DATABASE_URL` in your `.env` file, it is also necessary during compile time for `sqlx`.
