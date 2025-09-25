@@ -1,3 +1,11 @@
+CREATE TABLE IF NOT EXISTS accounts (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    username TEXT NOT NULL UNIQUE,
+    password BYTEA NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS students (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -28,14 +36,6 @@ CREATE TABLE IF NOT EXISTS students_classes (
     notes TEXT,
     hw TEXT,
     hw_notes TEXT
-);
-
-CREATE TABLE IF NOT EXISTS accounts (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    username TEXT NOT NULL UNIQUE,
-    password BYTEA NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
