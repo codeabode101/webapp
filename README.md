@@ -21,7 +21,7 @@ Demo user cannot reset password.
 
 The objective is for the person with the account (i.e. the parent of the kid learning) can VIEW information about the student. However, they cannot change any information about the student.
 
-## Building
+## Building & Setup
 
 Add the `DATABASE_URL` in your `.env` file, it is also necessary during compile time for `sqlx`.
 
@@ -37,15 +37,25 @@ Build the binary:
 
 ```bash
 cargo build
-cargo build --bin adduser
+cargo build --bin codeabode
 ```
 
-Add your students via the codeabode cli first. This project will be ported to rust soon, but for now get it from `https://github.com/codeabode101/agents`.
+Go to `https://github.com/codeabode101/agents` and download the binary from releases or setup using the guide in `README.md`. Make a curriculum using `./codeabode.py curriculum`, this will walk you through creating a student. Make sure you have a **GEMINI_API_KEY** before running this step or else you won't be able to complete the task.
 
-Then run `adduser` to add a "user" to hold information about your students. That's the user that you can log in with to view info about your students.
+Only **add** and **reset** work in the cli for now.
+
+Then run `codeabode add` to add a "user" to hold information about your students. That's the user that you can log in with to view info about your students. Then add that user to view it.
+
+You can also do this:
 
 ```bash
-cargo run --bin adduser
+cargo run --bin codeabode add
+```
+
+Now you can run the backend and log in with the credentials you specified during the add user phase, and you will be able to see the student you created with `./codeabode.py curriculum`.
+
+```bash
+cargo run
 ```
 
 There may also be a binary provided in releases.
