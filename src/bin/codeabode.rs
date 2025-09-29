@@ -1,10 +1,23 @@
 // this is meant to add a user to the database
 use clap::Command;
 use dotenv::dotenv;
+use gemini_client_api::gemini::{
+    ask::Gemini,
+    types::{
+        request::SystemInstruction,
+        sessions::Session,
+    },
+};
 use sqlx::postgres::PgPoolOptions;
 use std::{
     env,
     io::{self, Write},
+};
+
+use webapp::{
+    Curriculum,
+    CURCGPT_PROMPT,
+    CURCGPT_FORMAT,
 };
 
 #[tokio::main]
@@ -35,6 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match matches.subcommand() {
         Some(("add", _)) => add_user(db).await?,
         Some(("reset", _)) => reset_pswd(db).await?,
+        Some(("curriculum", _)) => curriculum(db).await?,
         _ => {
             eprintln!("Invalid command, use run codeabode help");
         }
@@ -163,6 +177,113 @@ fn get_response(question: &str, output: &mut String)
     io::stdout().flush()?;
 
     io::stdin().read_line(output)?;
+
+    Ok(())
+}
+
+async fn curriculum(db: sqlx::PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    let mut session = Session::new(usize::max_value());
+    let ai = Gemini::new(
+        env::var("GEMINI_API_KEY").expect("GEMINI_API_KEY not set"),
+        "gemini-2.5-flash",
+        Some(SystemInstruction::from_str(CURCGPT_PROMPT)),
+    )
+    .set_json_mode(serde_json::from_str(CURCGPT_FORMAT)?);
+
+    // get info from user
+    let mut query = String::new();
+    get_response("Explain the goal and needs of the student", &mut query)?;
+
+    let mut response = ai.ask(session.ask_string(query.clone())).await?;
+
+    println!("{}", response.get_text(""));
+
+    print!("(m)odify/(u)pload? ");
+    io::stdin().read_line(&mut query)?;
+
+    while query.trim() == "m" {
+        print!("> ");
+        io::stdin().read_line(&mut query)?;
+
+        response = ai
+            .ask(session.ask_string(query.clone()))
+            .await?;
+
+        println!("{}", response.get_text(""));
+
+        print!("(m)odify/(u)pload? ");
+        io::stdin().read_line(&mut query)?;
+    }
+
+    let parsed_json: Curriculum = response.get_json()?;
+
+    let mut name = String::new();
+    get_response("Name", &mut name)?;
+
+    let mut age = String::new();
+    get_response("Age", &mut age)?;
+
+    let age_int = age.trim().parse::<i32>()?;
+
+    let query = sqlx::query!(
+        "INSERT INTO students 
+        (name, age, current_level, final_goal, future_concepts)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id",
+        name.trim(),
+        age_int,
+        parsed_json.current_level,
+        parsed_json.final_goal,
+        &parsed_json.future_concepts
+    )
+    .fetch_one(&db)
+    .await?;
+
+    /*
+    if let Ok(row) = query {
+        let statuses = Vec::new();
+        let names = Vec::new();
+        let relevances = Vec::new();
+        let methods = Vec::new();
+        let stretch_methods = Vec::new();
+        let skills_tested = Vec::new();
+        let description = Vec::new();
+
+        for i in 0..parsed_json["classes"].len() {
+            let class = &parsed_json["classes"][i];
+            statuses.push(class["status"].as_str().unwrap());
+            names.push(class["name"].as_str().unwrap());
+            relevances.push(class["relevance"].as_str().unwrap_or(None));
+            methods.push(class["methods"].as_array().unwrap_or(None));
+            stretch_methods.push(class["stretch_methods?"].as_array().unwrap_or(None));
+            skills_tested.push(class["skills_tested"].as_array().unwrap_or(None));
+            description.push(class["description"].as_str().unwrap_or(None));
+        }
+
+        sqlx::query!(
+            "INSERT INTO students_classes 
+            (student_id, status, name, relevance, methods, 
+                stretch_methods, skills_tested, description)
+            SELECT $1, status, name, relevance, methods, 
+                stretch_methods, skills_tested, description
+            FROM 
+                UNNEST($2::text[], $3::text[], $4::text[], $8::text[]) 
+                AS t(status, name, relevance, description)
+                unnest_nd_1d($5::text[][]) AS methods,
+                unnest_nd_1d($6::text[][]) AS stretch_methods,
+                unnest_nd_1d($7::text[][]) AS skills_tested
+                ",
+            row.id,  // Single value used for all rows
+            &statuses[..],
+            &names[..],
+            &relevances[..],
+            &methods[..],
+            &stretch_methods[..],
+            &skills_tested[..],
+            &description[..]
+        ).execute(&db).await?;
+    }
+    */
 
     Ok(())
 }

@@ -48,6 +48,8 @@ From there, you can use `./codeabode.py` or you can use the binary compiled with
 
 Make a curriculum using `./codeabode.py curriculum`, this will walk you through creating a student. Make sure you have a **GEMINI_API_KEY** before running this step or else you won't be able to complete the task.
 
+**Note:** you can technically make a student using the codeabode-rs curriculum command, but it will not fill in the classes you create. It works only for demo purposes as of right now.
+
 ### cli
 
 Only **add** and **reset** work in the cli for now.

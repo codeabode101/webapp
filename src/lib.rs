@@ -1,3 +1,25 @@
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct Curriculum {
+    pub current_level: String,
+    pub final_goal: String,
+    pub classes: Vec<Class>,
+    pub future_concepts: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct Class {
+    pub status: String,
+    pub name: String,
+    pub relevance: Option<String>,
+    pub methods: Option<Vec<String>>,
+    pub stretch_methods: Option<Vec<String>>,
+    pub skills_tested: Option<Vec<String>>,
+    pub description: Option<String>,
+}
+
+
 pub const CURCGPT_FORMAT: &str = stringify!({
     "type": "OBJECT",
     "properties": {
