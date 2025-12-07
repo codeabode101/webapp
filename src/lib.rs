@@ -12,11 +12,11 @@ pub struct Curriculum {
 pub struct Class {
     pub status: String,
     pub name: String,
-    pub relevance: Option<String>,
-    pub methods: Option<Vec<String>>,
-    pub stretch_methods: Option<Vec<String>>,
-    pub skills_tested: Option<Vec<String>>,
-    pub description: Option<String>,
+    pub relevance: String,
+    pub methods: String, // Vec
+    pub stretch_methods: String, // Vec
+    pub skills_tested: String, // Vec
+    pub description: String,
 }
 
 

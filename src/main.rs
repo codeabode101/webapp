@@ -158,12 +158,12 @@ async fn list_students(
         StudentInfo,
         "SELECT id, name
         FROM students 
-        WHERE account_id = (
+        WHERE (
             SELECT id 
             FROM accounts 
             WHERE username = $1 
                 AND password = digest($2, 'sha512')
-        )",
+        ) = ANY(account_id)",
         username.value(),
         password.value()
     )
@@ -182,12 +182,12 @@ async fn get_student(
     match sqlx::query!(
         "SELECT name, age, current_level, final_goal, future_concepts, notes
         FROM students 
-        WHERE account_id = (
+        WHERE (
             SELECT id 
             FROM accounts 
             WHERE username = $1 
                 AND password = digest($2, 'sha512')
-        ) AND id = $3",
+        ) = ANY(account_id) AND id = $3",
         cookie_jar.get("username").ok_or(StatusCode::NOT_FOUND)?.value(),
         cookie_jar.get("password").ok_or(StatusCode::NOT_FOUND)?.value(),
         id
@@ -199,7 +199,8 @@ async fn get_student(
                 "SELECT class_id, status, name, relevance, methods, stretch_methods,
                 skills_tested, description, classwork, notes, hw, hw_notes
                 FROM students_classes 
-                WHERE student_id = $1",
+                WHERE student_id = $1
+                ORDER BY class_id DESC",
                 id
             )
             .fetch_all(&**state)

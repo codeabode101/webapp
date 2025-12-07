@@ -1,4 +1,3 @@
-// this is meant to add a user to the database
 use clap::Command;
 use dotenv::dotenv;
 use gemini_client_api::gemini::{
@@ -82,11 +81,10 @@ async fn add_user(
         Ok(row) => {
             println!("User created with id: {}", row.id);
 
-            // list all students that don't have an account
+            // list all students 
             let students = sqlx::query!(
                 "SELECT id, name
-                FROM students
-                WHERE account_id IS NULL"
+                FROM students"
             )
             .fetch_all(&db)
             .await?;
@@ -111,8 +109,13 @@ async fn add_user(
                         let student_id_int = student_id.trim().parse::<usize>()?;
                         sqlx::query!(
                             "UPDATE students
-                            SET account_id = $1
-                            WHERE id = $2",
+                             SET account_id = 
+                                 CASE 
+                                     WHEN account_id IS NULL THEN ARRAY[$1::integer]
+                                     WHEN NOT (account_id @> ARRAY[$1]) THEN account_id || $1
+                                     ELSE account_id
+                                 END
+                             WHERE id = $2",
                             row.id,
                             students[student_id_int].id
                         )
@@ -239,51 +242,47 @@ async fn curriculum(db: sqlx::PgPool) -> Result<(), Box<dyn std::error::Error>> 
     .fetch_one(&db)
     .await?;
 
-    /*
-    if let Ok(row) = query {
-        let statuses = Vec::new();
-        let names = Vec::new();
-        let relevances = Vec::new();
-        let methods = Vec::new();
-        let stretch_methods = Vec::new();
-        let skills_tested = Vec::new();
-        let description = Vec::new();
+    let mut statuses = Vec::new();
+    let mut names = Vec::new();
+    let mut relevances = Vec::new();
+    let mut methods = Vec::new();
+    let mut stretch_methods = Vec::new();
+    let mut skills_tested = Vec::new();
+    let mut description = Vec::new();
 
-        for i in 0..parsed_json["classes"].len() {
-            let class = &parsed_json["classes"][i];
-            statuses.push(class["status"].as_str().unwrap());
-            names.push(class["name"].as_str().unwrap());
-            relevances.push(class["relevance"].as_str().unwrap_or(None));
-            methods.push(class["methods"].as_array().unwrap_or(None));
-            stretch_methods.push(class["stretch_methods?"].as_array().unwrap_or(None));
-            skills_tested.push(class["skills_tested"].as_array().unwrap_or(None));
-            description.push(class["description"].as_str().unwrap_or(None));
-        }
-
-        sqlx::query!(
-            "INSERT INTO students_classes 
-            (student_id, status, name, relevance, methods, 
-                stretch_methods, skills_tested, description)
-            SELECT $1, status, name, relevance, methods, 
-                stretch_methods, skills_tested, description
-            FROM 
-                UNNEST($2::text[], $3::text[], $4::text[], $8::text[]) 
-                AS t(status, name, relevance, description)
-                unnest_nd_1d($5::text[][]) AS methods,
-                unnest_nd_1d($6::text[][]) AS stretch_methods,
-                unnest_nd_1d($7::text[][]) AS skills_tested
-                ",
-            row.id,  // Single value used for all rows
-            &statuses[..],
-            &names[..],
-            &relevances[..],
-            &methods[..],
-            &stretch_methods[..],
-            &skills_tested[..],
-            &description[..]
-        ).execute(&db).await?;
+    for i in 0..parsed_json.classes.len() {
+        let class = &parsed_json.classes[i];
+        statuses.push(class.status.clone());
+        names.push(class.name.clone());
+        relevances.push(class.relevance.clone());
+        methods.push(class.methods.clone());
+        stretch_methods.push(class.stretch_methods.clone());
+        skills_tested.push(class.skills_tested.clone());
+        description.push(class.description.clone());
     }
-    */
+
+    sqlx::query!(
+        "INSERT INTO students_classes 
+        (student_id, status, name, relevance, methods, 
+            stretch_methods, skills_tested, description)
+        SELECT $1, status, name, relevance, methods, 
+            stretch_methods, skills_tested, description
+        FROM 
+            UNNEST($2::text[], $3::text[], $4::text[], $8::text[]) 
+            AS t(status, name, relevance, description),
+            unnest_2d_1d($5::text[][]) AS methods,
+            unnest_2d_1d($6::text[][]) AS stretch_methods,
+            unnest_2d_1d($7::text[][]) AS skills_tested
+            ",
+        query.id,  // Single value used for all rows
+        &statuses[..],
+        &names[..],
+        &relevances[..],
+        &methods[..],
+        &stretch_methods[..],
+        &skills_tested[..],
+        &description[..]
+    ).execute(&db).await?;
 
     Ok(())
 }

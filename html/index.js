@@ -4,6 +4,68 @@ const loginForm = document.getElementById('login-card');
 const studentsList = document.getElementById('students-card');
 const welcomeHeadline = document.getElementById('welcome-headline');
 
+const changePasswordBtn = document.getElementById('change-password-btn');
+const changePasswordModal = document.getElementById('change-password-modal');
+const closeModalBtn = document.querySelector('.close-modal');
+
+// Text modal elements
+const textModal = document.getElementById('text-modal');
+const closeTextModalBtn = document.querySelector('.close-text-modal');
+const textModalTitle = document.getElementById('text-modal-title');
+const textModalBody = document.getElementById('text-modal-body');
+
+const converter = new showdown.Converter();
+
+// Open text modal
+function openTextModal(title, content) {
+  textModalTitle.textContent = title;
+  textModalBody.innerHTML = content;
+  textModal.classList.add('active');
+}
+
+// Close text modal
+closeTextModalBtn.addEventListener('click', () => {
+  textModal.classList.remove('active');
+});
+
+// Close text modal when clicking outside
+textModal.addEventListener('click', (e) => {
+  if (e.target === textModal) {
+    textModal.classList.remove('active');
+  }
+});
+
+// Close text modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && textModal.classList.contains('active')) {
+    textModal.classList.remove('active');
+  }
+});
+    
+// Open change password modal
+changePasswordBtn.addEventListener('click', () => {
+  changePasswordModal.classList.add('active');
+});
+
+// Close modal
+closeModalBtn.addEventListener('click', () => {
+  changePasswordModal.classList.remove('active');
+});
+
+// Close modal when clicking outside
+changePasswordModal.addEventListener('click', (e) => {
+  if (e.target === changePasswordModal) {
+    changePasswordModal.classList.remove('active');
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && changePasswordModal.classList.contains('active')) {
+    changePasswordModal.classList.remove('active');
+  }
+});
+
 function hexToByteArray(hexx) {
     var hex = hexx.toString();
     var byteArray = [];
@@ -138,6 +200,38 @@ async function loadStudents() {
   }
 }
 
+// Handle click events for view text buttons using event delegation
+document.addEventListener('click', (e) => {
+  // Check if the clicked element is a view-text-btn
+  if (e.target.classList.contains('view-text-btn')) {
+    const button = e.target;
+    const classCard = button.closest('.class-card, .upcoming-class-card');
+    const classId = classCard?.dataset.classId || 'Unknown Class';
+    const fieldType = button.dataset.type;
+    const className = classCard?.querySelector('strong')?.textContent || 'Class';
+    
+    // Find the actual text from the preview span
+    const previewSpan = button.nextElementSibling;
+    if (previewSpan?.classList.contains('text-preview')) {
+      // Get the full text from the data attribute or from the student data
+      // For now, we'll use a placeholder - you might want to store the full text in a data attribute
+      const fullText = converter.makeHtml(button.dataset.fullText) || 
+                      previewSpan.textContent.replace('...', '') + 
+                      (button.dataset.fullText ? '' : ' (Full text not loaded)');
+      
+      const titles = {
+        'classwork': 'Classwork',
+        'homework': 'Homework',
+      };
+      
+      openTextModal(
+        `${titles[fieldType] || fieldType} - ${className}`,
+        fullText
+      );
+    }
+  }
+});
+
 function renderStudents(items) {
   if (!items?.length) {
     listEl.innerHTML = '<li class="empty">No students found.</li>';
@@ -147,7 +241,7 @@ function renderStudents(items) {
   for (const s of items) {
     const li = document.createElement('li');
     li.innerHTML = `
-      <span><strong>#${s.id}</strong> — ${escapeHtml(s.name)}</span>
+      <span><strong>${escapeHtml(s.name)}</strong></span>
       <span>
         <button data-id="${s.id}" class="view-btn">View</button>
       </span>`;
@@ -206,37 +300,107 @@ function computeStudentSummary(s) {
 
 function renderStudentDetail(s) {
   const summary = computeStudentSummary(s);
-  const cls = (s.classes || []).map(c => `
-    <li>
-      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-        <strong>${escapeHtml(c.name)}</strong>
-        <span class="chip">${escapeHtml(c.status)}</span>
-        ${c.methods?.length ? `<span class="chip chip-soft">${c.methods.length} methods</span>` : ''}
-        ${c.stretch_methods?.length ? `<span class=\"chip chip-soft\">${c.stretch_methods.length} stretch</span>` : ''}
-        ${c.skills_tested?.length ? `<span class=\"chip chip-soft\">${c.skills_tested.length} skills</span>` : ''}
+  
+  // Helper function to create view buttons for long text
+  const createViewButton = (text, type, label) => {
+    if (!text || text.trim() === '') return '';
+    // If text is short (less than 150 chars), show inline, otherwise show button
+    return `
+      <div class="class-field">
+        <strong>${label}:</strong>
+        <button class="view-text-btn" data-type="${type}" data-full-text="${escapeHtml(text)}" style="
+          margin-left: 0.5rem;
+          padding: 0.25rem 0.75rem;
+          font-size: 0.85rem;
+          background: rgba(106, 165, 255, 0.15);
+          border: 1px solid var(--accent);
+          color: var(--accent);
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        ">View ${label}</button>
+        <span class="text-preview" style="
+          display: inline-block;
+          margin-left: 0.5rem;
+          color: var(--muted);
+          font-style: italic;
+          font-size: 0.9rem;
+        ">${escapeHtml(text.substring(0, 80))}...</span>
       </div>
-      ${c.relevance ? `<div>Relevance: ${escapeHtml(c.relevance)}</div>` : ''}
-      ${c.methods?.length ? `<div>Methods: ${c.methods.map(escapeHtml).join(', ')}</div>` : ''}
-      ${c.stretch_methods?.length ? `<div>Stretch: ${c.stretch_methods.map(escapeHtml).join(', ')}</div>` : ''}
-      ${c.skills_tested?.length ? `<div>Skills: ${c.skills_tested.map(escapeHtml).join(', ')}</div>` : ''}
-      ${c.description ? `<div>Description: ${escapeHtml(c.description)}</div>` : ''}
-      ${c.classwork ? `<div>Classwork: ${escapeHtml(c.classwork)}</div>` : ''}
-      ${c.notes ? `<div>Notes: ${escapeHtml(c.notes)}</div>` : ''}
-      ${c.hw ? `<div>HW: ${escapeHtml(c.hw)}</div>` : ''}
-      ${c.hw_notes ? `<div>HW Notes: ${escapeHtml(c.hw_notes)}</div>` : ''}
-    </li>
-  `).join('');
+    `;
+  };
+
+  // Create individual cards for each class
+  const classCards = (s.classes || []).map(c => {
+    // Store the full text in data attributes
+    const classworkBtn = createViewButton(c.classwork, 'classwork', 'Classwork');
+    const hwBtn = createViewButton(c.hw, 'homework', 'Homework');
+    const notesBtn = createViewButton(c.notes, 'notes', 'Notes');
+    const hwNotesBtn = createViewButton(c.hw_notes, 'hw_notes', 'HW Notes');
+    
+    return `
+      <div class="${c.status == 'upcoming' ? 'upcoming-class-card' : 'class-card'}" data-class-id="${c.id || ''}">
+        <div class="class-card-header">
+          <strong>${escapeHtml(c.name)}</strong>
+          <span class="chip">${escapeHtml(c.status)}</span>
+        </div>
+        
+        <div class="class-card-content">
+          ${c.relevance ? `<div class="class-field"><strong>Relevance:</strong> ${escapeHtml(c.relevance)}</div>` : ''}
+          
+          ${c.methods?.length ? `
+            <div class="class-field">
+              <strong>Methods:</strong>
+              <div class="chip-container">
+                ${c.methods.map(m => `<span class="chip chip-soft">${escapeHtml(m)}</span>`).join('')}
+              </div>
+            </div>` : ''}
+          
+          ${c.stretch_methods?.length ? `
+            <div class="class-field">
+              <strong>Stretch Methods:</strong>
+              <div class="chip-container">
+                ${c.stretch_methods.map(m => `<span class="chip chip-soft">${escapeHtml(m)}</span>`).join('')}
+              </div>
+            </div>` : ''}
+          
+          ${c.skills_tested?.length ? `
+            <div class="class-field">
+              <strong>Skills Tested:</strong>
+              <div class="chip-container">
+                ${c.skills_tested.map(skill => `<span class="chip chip-soft">${escapeHtml(skill)}</span>`).join('')}
+              </div>
+            </div>` : ''}
+          
+          ${c.description ? `<div class="class-field"><strong>Description:</strong> ${escapeHtml(c.description)}</div>` : ''}
+          ${classworkBtn}
+          ${c.notes ? `<div class="class-field"><strong>Notes:</strong> ${escapeHtml(c.notes)}</div>` : ''}
+          ${hwBtn}
+           ${c.hw_notes ? `<div class="class-field"><strong>HW Notes:</strong> ${escapeHtml(c.hw_notes)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Create future concepts card (unchanged)
+  const futureConceptsList = (s.future_concepts || []);
+  const futureConceptsCard = futureConceptsList.length ? `
+    <div class="future-concepts-card">
+      <h3 style="margin:0 0 .75rem 0; color:var(--text)">Future Concepts</h3>
+      <div class="future-concepts-list">
+        ${futureConceptsList.map(concept => `
+          <span class="concept-chip">${escapeHtml(concept)}</span>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
 
   return `
     <div class="card" style="margin-top:1rem">
-      <h2>Student Detail</h2>
-      <div class="small" style="color:var(--muted)">ID #${s.id}</div>
+      <h2>${escapeHtml(s.current_level)}</h2>
       <div style="margin-top:.75rem; display:grid; gap:.35rem">
-        <div><strong>Name:</strong> ${escapeHtml(s.name)}</div>
         <div><strong>Age:</strong> ${s.age}</div>
-        <div><strong>Current Level:</strong> ${escapeHtml(s.current_level)}</div>
         <div><strong>Final Goal:</strong> ${escapeHtml(s.final_goal)}</div>
-        <div><strong>Future Concepts:</strong> ${(s.future_concepts||[]).map(escapeHtml).join(', ') || '—'}</div>
         <div><strong>Notes:</strong> ${s.notes ? escapeHtml(s.notes) : '—'}</div>
       </div>
 
@@ -253,9 +417,21 @@ function renderStudentDetail(s) {
         </div>
       </div>
 
-      <hr style="border:0;border-top:1px solid var(--border);margin:1rem 0"/>
-      <h3 style="margin:.2rem 0 0.5rem">Classes</h3>
-      ${cls ? `<ul style="list-style:none;padding:0;margin:.4rem 0 0;display:grid;gap:.6rem">${cls}</ul>` : '<div class="empty">No classes found.</div>'}
+      <hr style="border:0;border-top:1px solid var(--border);margin:1.5rem 0"/>
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.75rem">
+        <h3 style="margin:0">Classes</h3>
+        <span class="chip chip-soft">${summary.total} total (so far)</span>
+      </div>
+      
+      ${classCards ? 
+        `<div class="classes-container">
+          ${classCards}
+        </div>` : 
+        '<div class="empty">No classes found.</div>'
+      }
+
+      ${futureConceptsCard}
     </div>
   `;
 }
@@ -277,3 +453,4 @@ qs('#refresh-students').addEventListener('click', loadStudents);
 
 // adding this line makes the above work somehow
 console.log('CodeAbode WebApp loaded.');
+
