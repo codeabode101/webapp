@@ -187,7 +187,8 @@ async function loadStudents() {
     });
     if (!res.ok) {
       if (res.status === 401) {
-        setStatus(qs('#students-status'), 'Unauthorized. Please login first.', 'warn');
+        document.cookie = "name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        updateLoginUI();
       } else {
         const text = await res.text();
         setStatus(qs('#students-status'), `Failed: ${text}`, 'err');
@@ -260,6 +261,10 @@ async function viewStudent(id) {
       method: 'POST',
       credentials: 'same-origin'
     });
+    if (res.status == 404) {
+        document.cookie = "name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        updateLoginUI();
+    }
     if (!res.ok) {
       const text = await res.text();
       setStatus(qs('#students-status'), `Failed: ${text}`, 'err');
