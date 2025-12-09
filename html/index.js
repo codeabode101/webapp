@@ -158,6 +158,9 @@ qs('#change-form').addEventListener('submit', async (e) => {
     const text = await res.text();
     if (res.ok) {
       setStatus(statusEl, text || 'Password updated successfully.', 'ok');
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
     } else if (res.status === 401) {
       setStatus(statusEl, 'Incorrect password.', 'err');
     } else {

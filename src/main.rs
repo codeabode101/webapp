@@ -65,29 +65,59 @@ struct StudentInfo {
 #[axum::debug_handler]
 async fn reset_password(
     state: axum::extract::State<Arc<sqlx::PgPool>>,
+    jar: CookieJar,
     Json(body): Json<ResetPasswordRequest>,
-) -> (StatusCode, String) {
+) -> (StatusCode, CookieJar, String) {
+    // Create cookies with the same attributes as when they were set
+    let token_cookie = Cookie::build(("token", ""))
+        .path("/")
+        .max_age(Duration::seconds(0)) // Expire immediately
+        .http_only(true)
+        .same_site(SameSite::Strict);
+    
+    let name_cookie = Cookie::build(("name", ""))
+        .path("/")
+        .max_age(Duration::seconds(0)) // Expire immediately
+        .same_site(SameSite::Strict);
+    
+    // Remove both cookies
+    let new_jar = jar.clone()
+        .remove(token_cookie)
+        .remove(name_cookie);
+
     match sqlx::query!(
         "UPDATE accounts 
         SET password = digest($1, 'sha512') 
-        WHERE username = $2 AND password = digest($3, 'sha512')",
+        WHERE username = $2 AND password = digest($3, 'sha512')
+        RETURNING id",
         body.new_password,
         body.username,
         body.password
     )
-    .execute(&**state).await {
-        Ok(row) => {
-            if row.rows_affected() == 1 {
-                (StatusCode::OK, "Password reset successfully".to_string())
-            } else {
-                (StatusCode::UNAUTHORIZED, "Incorrect password".to_string())
+    .fetch_optional(&**state).await {
+        Ok(Some(row)) => {
+            match sqlx::query!(
+                "UPDATE tokens
+                SET expires_at = now() 
+                WHERE user_id = $1 AND
+                expires_at > now()",
+                row.id
+            )
+            .execute(&**state).await {
+                Ok(deleted_tokens) => (StatusCode::OK, new_jar, 
+                    format!("Password reset successfully: {} tokens cleared", 
+                    deleted_tokens.rows_affected())),
+                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, jar, e.to_string())
             }
-        }
+        },
+        Ok(None) => {
+            (StatusCode::UNAUTHORIZED, new_jar, "Incorrect password".to_string())
+        },
         Err(e) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+            (StatusCode::INTERNAL_SERVER_ERROR, jar, e.to_string())
         }
     } 
-} 
+}
 
 #[axum::debug_handler]
 async fn login(
@@ -96,36 +126,36 @@ async fn login(
     Json(body): Json<LoginRequest>,
 ) -> Result<(CookieJar, String), (StatusCode, String)> {
     match sqlx::query!(
-        "SELECT name
+        r#"
+        INSERT INTO tokens (user_id)
+        SELECT id 
         FROM accounts 
         WHERE username = $1 
-        AND password = digest($2, 'sha512')",
+        AND password = digest($2, 'sha512')
+        RETURNING 
+            token, 
+            (SELECT name FROM accounts WHERE id = tokens.user_id) as name
+        "#,
         body.username,
         body.password
     )
-    .fetch_optional(&**state).await {
+    .fetch_optional(&**state)  // Use fetch_optional since we might get 0 or 1 row
+    .await
+    {
         Ok(Some(row)) => {
-            // don't use secure cookies because it has to work on localhost
             Ok((
                 jar
                   .add(
-                      Cookie::build(("username", body.username))
-                        .http_only(true)
+                      Cookie::build(("name", row.name.unwrap()))
                         .same_site(SameSite::Strict)
-                        .max_age(Duration::days(30))
+                        .max_age(Duration::days(15))
                         .path("/")
                   )
                   .add(
-                      Cookie::build(("name", row.name))
-                        .same_site(SameSite::Strict)
-                        .max_age(Duration::days(30))
-                        .path("/")
-                  )
-                  .add(
-                      Cookie::build(("password", body.password))
+                      Cookie::build(("token", row.token))
                         .http_only(true)
                         .same_site(SameSite::Strict)
-                        .max_age(Duration::days(30))
+                        .max_age(Duration::days(15))
                         .path("/")
                   ),
                 "Login successful".to_string(),
@@ -142,35 +172,43 @@ async fn login(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 e.to_string() 
             ))
-        }
-    } 
+        },
+    }
 }
 
 #[axum::debug_handler]
 async fn list_students(
     state: axum::extract::State<Arc<sqlx::PgPool>>,
     cookie_jar: CookieJar,
-) -> Result<Json<Vec<StudentInfo>>, StatusCode> {
-    let username = cookie_jar.get("username").ok_or(StatusCode::UNAUTHORIZED)?;
-    let password = cookie_jar.get("password").ok_or(StatusCode::UNAUTHORIZED)?;
+) -> Result<Json<Vec<StudentInfo>>, (StatusCode, CookieJar, String)> {
+    // Try to get the token
+    let token = match cookie_jar.get("token") {
+        Some(token) => token,
+        None => return Err((StatusCode::UNAUTHORIZED, cookie_jar, "No token provided".to_string())),
+    };
 
+    // Execute the query
     match sqlx::query_as!(
         StudentInfo,
         "SELECT id, name
         FROM students 
         WHERE (
-            SELECT id 
-            FROM accounts 
-            WHERE username = $1 
-                AND password = digest($2, 'sha512')
+            SELECT user_id 
+            FROM tokens 
+            WHERE token = $1
+                AND expires_at > now()
         ) = ANY(account_id)",
-        username.value(),
-        password.value()
+        token.value()
     )
     .fetch_all(&**state).await {
         Ok(rows) => Ok(Json(rows)),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    } 
+        Err(e) => {
+            // Remove cookies on error
+            let updated_cookie_jar = cookie_jar.remove("token").remove("name");
+            Err((StatusCode::UNAUTHORIZED, updated_cookie_jar, 
+                 format!("Invalid token or database error: {}", e)))
+        },
+    }
 }
 
 #[axum::debug_handler]
@@ -183,13 +221,12 @@ async fn get_student(
         "SELECT name, age, current_level, final_goal, future_concepts, notes
         FROM students 
         WHERE (
-            SELECT id 
-            FROM accounts 
-            WHERE username = $1 
-                AND password = digest($2, 'sha512')
-        ) = ANY(account_id) AND id = $3",
-        cookie_jar.get("username").ok_or(StatusCode::NOT_FOUND)?.value(),
-        cookie_jar.get("password").ok_or(StatusCode::NOT_FOUND)?.value(),
+            SELECT user_id 
+            FROM tokens 
+            WHERE token = $1
+                AND expires_at > now()
+        ) = ANY(account_id) AND id = $2",
+        cookie_jar.get("token").ok_or(StatusCode::NOT_FOUND)?.value(),
         id
     ).fetch_optional(&**state).await {
         Ok(Some(row)) => {
