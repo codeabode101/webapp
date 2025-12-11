@@ -1,5 +1,11 @@
 # webapp
-Codeabode's web application. Or at least, the backend provided by it.
+
+This application includes:
+- a web application 
+- a cli for students to submit their assignments
+- admin tools
+
+All made in rust. You will need to use the [agents](https://github.com/codeabode101/agents) repo to generate classwork and homework to be used by this infrastructure.
 
 ## Getting started
 

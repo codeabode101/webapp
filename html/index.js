@@ -343,8 +343,6 @@ function renderStudentDetail(s) {
     // Store the full text in data attributes
     const classworkBtn = createViewButton(c.classwork, 'classwork', 'Classwork');
     const hwBtn = createViewButton(c.hw, 'homework', 'Homework');
-    const notesBtn = createViewButton(c.notes, 'notes', 'Notes');
-    const hwNotesBtn = createViewButton(c.hw_notes, 'hw_notes', 'HW Notes');
     
     return `
       <div class="${c.status == 'upcoming' ? 'upcoming-class-card' : 'class-card'}" data-class-id="${c.id || ''}">
