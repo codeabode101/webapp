@@ -18,13 +18,11 @@ use tracing::info;
 #[derive(Serialize)]
 struct StudentClass {
     class_id: i32,
-    status: String,
-    name: String,
-    relevance: Option<String>,
-    methods: Option<Vec<String>>,
+    status: Arc<str>,
+    name: Arc<str>,
+    methods: Vec<String>,
     stretch_methods: Option<Vec<String>>,
-    skills_tested: Option<Vec<String>>,
-    description: Option<String>,
+    description: Arc<str>,
     classwork: Option<String>,
     notes: Option<String>,
     hw: Option<String>,
@@ -34,10 +32,10 @@ struct StudentClass {
 #[derive(Serialize)]
 struct Student {
     id: i32,
-    name: String,
+    name: Arc<str>,
     age: i32,
-    current_level: String,
-    final_goal: String,
+    current_level: Arc<str>,
+    final_goal: Arc<str>,
     future_concepts: Vec<String>,
     notes: Option<String>,
     classes: Vec<StudentClass>
@@ -233,8 +231,8 @@ async fn get_student(
             // fetch the classes:
             let classes = sqlx::query_as!(
                 StudentClass,
-                "SELECT class_id, status, name, relevance, methods, stretch_methods,
-                skills_tested, description, classwork, notes, hw, hw_notes
+                "SELECT class_id, status, name, methods, stretch_methods,
+                description, classwork, notes, hw, hw_notes
                 FROM students_classes 
                 WHERE student_id = $1
                 ORDER BY class_id DESC",
@@ -246,12 +244,12 @@ async fn get_student(
 
             let student = Student {
                 id,
-                name: row.name,
+                name: row.name.into(),
                 age: row.age,
-                current_level: row.current_level,
-                final_goal: row.final_goal,
-                future_concepts: row.future_concepts,
-                notes: row.notes,
+                current_level: row.current_level.into(),
+                final_goal: row.final_goal.into(),
+                future_concepts: row.future_concepts.into(),
+                notes: row.notes.into(),
                 classes,
             };
             Ok(serde_json::to_string(&student).unwrap())

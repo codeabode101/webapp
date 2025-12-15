@@ -5,18 +5,16 @@ pub struct Curriculum {
     pub current_level: String,
     pub final_goal: String,
     pub classes: Vec<Class>,
-    pub future_concepts: Vec<String>,
+    pub future_concepts: Box<[Box<str>]>,
 }
 
 #[derive(Deserialize)]
 pub struct Class {
-    pub status: String,
-    pub name: String,
-    pub relevance: String,
-    pub methods: String, // Vec
-    pub stretch_methods: String, // Vec
-    pub skills_tested: String, // Vec
-    pub description: String,
+    pub status: Box<str>,
+    pub name: Box<str>,
+    pub methods: Box<str>, // Vec
+    pub stretch_methods: Box<str>, // Vec
+    pub description: Box<str>,
 }
 
 

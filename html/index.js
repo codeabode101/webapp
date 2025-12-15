@@ -352,7 +352,7 @@ function renderStudentDetail(s) {
         </div>
         
         <div class="class-card-content">
-          ${c.relevance ? `<div class="class-field"><strong>Relevance:</strong> ${escapeHtml(c.relevance)}</div>` : ''}
+          ${c.description ? `<div class="class-field"><strong>Description:</strong> ${escapeHtml(c.description)}</div>` : ''}
           
           ${c.methods?.length ? `
             <div class="class-field">
@@ -370,15 +370,6 @@ function renderStudentDetail(s) {
               </div>
             </div>` : ''}
           
-          ${c.skills_tested?.length ? `
-            <div class="class-field">
-              <strong>Skills Tested:</strong>
-              <div class="chip-container">
-                ${c.skills_tested.map(skill => `<span class="chip chip-soft">${escapeHtml(skill)}</span>`).join('')}
-              </div>
-            </div>` : ''}
-          
-          ${c.description ? `<div class="class-field"><strong>Description:</strong> ${escapeHtml(c.description)}</div>` : ''}
           ${classworkBtn}
           ${c.notes ? `<div class="class-field"><strong>Notes:</strong> ${escapeHtml(c.notes)}</div>` : ''}
           ${hwBtn}
