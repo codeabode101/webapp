@@ -244,43 +244,36 @@ async fn curriculum(db: sqlx::PgPool) -> Result<(), Box<dyn std::error::Error>> 
 
     let mut statuses = Vec::new();
     let mut names = Vec::new();
-    let mut relevances = Vec::new();
     let mut methods = Vec::new();
     let mut stretch_methods = Vec::new();
-    let mut skills_tested = Vec::new();
     let mut description = Vec::new();
 
     for i in 0..parsed_json.classes.len() {
         let class = &parsed_json.classes[i];
         statuses.push(class.status.clone());
         names.push(class.name.clone());
-        relevances.push(class.relevance.clone());
         methods.push(class.methods.clone());
         stretch_methods.push(class.stretch_methods.clone());
-        skills_tested.push(class.skills_tested.clone());
         description.push(class.description.clone());
     }
 
     sqlx::query!(
         "INSERT INTO students_classes 
-        (student_id, status, name, relevance, methods, 
-            stretch_methods, skills_tested, description)
-        SELECT $1, status, name, relevance, methods, 
-            stretch_methods, skills_tested, description
+        (student_id, status, name, methods, 
+            stretch_methods, description)
+        SELECT $1, status, name, methods, 
+            stretch_methods, description
         FROM 
-            UNNEST($2::text[], $3::text[], $4::text[], $8::text[]) 
-            AS t(status, name, relevance, description),
-            unnest_2d_1d($5::text[][]) AS methods,
-            unnest_2d_1d($6::text[][]) AS stretch_methods,
-            unnest_2d_1d($7::text[][]) AS skills_tested
+            UNNEST($2::text[], $3::text[], $6::text[]) 
+            AS t(status, name, description),
+            unnest_2d_1d($4::text[][]) AS methods,
+            unnest_2d_1d($5::text[][]) AS stretch_methods
             ",
         query.id,  // Single value used for all rows
         &statuses[..],
         &names[..],
-        &relevances[..],
         &methods[..],
         &stretch_methods[..],
-        &skills_tested[..],
         &description[..]
     ).execute(&db).await?;
 
