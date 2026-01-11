@@ -17,7 +17,6 @@ pub struct Class {
     pub description: String,
 }
 
-
 pub const CURCGPT_FORMAT: &str = stringify!({
     "type": "OBJECT",
     "properties": {

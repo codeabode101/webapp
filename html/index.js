@@ -8,40 +8,174 @@ const changePasswordBtn = document.getElementById('change-password-btn');
 const changePasswordModal = document.getElementById('change-password-modal');
 const closeModalBtn = document.querySelector('.close-modal');
 
-// Text modal elements
-const textModal = document.getElementById('text-modal');
-const closeTextModalBtn = document.querySelector('.close-text-modal');
-const textModalTitle = document.getElementById('text-modal-title');
-const textModalBody = document.getElementById('text-modal-body');
+const classworkPage = document.getElementById('classwork-page');
+const classworkTitle = document.getElementById('classwork-title');
+const classworkContent = document.getElementById('classwork-content');
+const backBtn = document.querySelector('.back-btn');
+const fileUploadBox = document.getElementById('file-upload-box');
+const fileInput = document.getElementById('file-input');
+const textInput = document.getElementById('text-input');
+const submitBtn = document.querySelector('.submit-btn');
+const myWorkBtn = document.querySelector('.my-work-btn');
 
-const converter = new showdown.Converter();
+const submissionContent = document.querySelector('.submission-code');
 
-// Open text modal
-function openTextModal(title, content) {
-  textModalTitle.textContent = title;
-  textModalBody.innerHTML = content;
-  textModal.classList.add('active');
+// classwork or homework if we're submitting
+let submittingType = null;
+let classId = null;
+
+// Handle file upload box click
+fileUploadBox.addEventListener('click', () => {
+  fileInput.click();
+});
+
+// Handle file selection
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    fileUploadBox.innerHTML = `
+      <div style="text-align:center">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+        <div><strong>${file.name}</strong></div>
+        <div style="font-size: 0.8rem; margin-top: 0.5rem;">${(file.size / 1024).toFixed(2)} KB</div>
+      </div>
+    `;
+  }
+});
+
+submitBtn.addEventListener('click', async () => {
+    let work = null;
+  
+    if (fileInput.files.length > 0) {
+        work = await fileInput.files[0].text();
+    } else {
+        work = textInput.value.trim();
+    }
+  
+    try {
+      const res = await fetch(`/api/submit/${submittingType}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ class_id: Number(classId), work })
+      });
+      if (res.ok) {
+        alert("Submitted");
+      } else {
+        const text = await res.text();
+        alert(`${res.status} : ${text}`);
+      }
+    } catch (e) {
+      alert(e);
+    } 
+  
+  
+    textInput.value = "";
+  
+    fileInput.value = "";
+    fileUploadBox.innerHTML =  `
+          <span>Click to upload file or drag &amp; drop</span>
+          <input type="file" id="file-input">
+    `;
+    submissionContent.innerHTML = `<pre><code>${escapeHtml(work)}</code></pre>`;
+    myWorkBtn.style.display = 'grid';
+});
+
+myWorkBtn.addEventListener('click', () => {
+    if (submissionContent.style.display == 'none') {
+        submissionContent.style.display = 'grid';
+    } else {
+        submissionContent.style.display = 'none';
+    }
+});
+
+// Function to show classwork page
+function showClassworkPage(type, className, content, submission) {
+  // Hide main app
+  document.querySelector('.main-app-header').style.display = 'none'; 
+  document.querySelector('.main-app').style.display = 'none';
+
+  console.log(submission);
+
+  if (submission) {
+    myWorkBtn.style.display = 'grid';
+    myWorkBtn.dataset.submission = submission;
+  } else {
+    myWorkBtn.style.display = 'none';
+  } 
+
+  submissionContent.style.display = 'none';
+  submissionContent.innerHTML = `<pre><code>${escapeHtml(submission)}</code></pre>`;
+  
+  // Show classwork page
+  classworkPage.style.display = 'grid';
+
+  // Set titles and content
+  const displayType = type === 'classwork' ? 'Classwork' : 'Homework';
+  classworkTitle.textContent = `${displayType} - ${className}`;
+  
+  // Convert markdown to HTML if needed (using showdown if available)
+  if (typeof showdown !== "undefined") { 
+      const converter = new showdown.Converter();
+      classworkContent.innerHTML = converter.makeHtml(content);
+  } else {
+      classworkContent.innerText = content;
+  } 
+
+  // scroll all the way up
+  window.scrollTo(0, 0);
+
+  //TODO:  Update URL
+  //window.history.pushState({ classId, type }, '', `/${type}/${classId}`);
 }
 
-// Close text modal
-closeTextModalBtn.addEventListener('click', () => {
-  textModal.classList.remove('active');
-});
+// Function to show main app
+function showMainApp() {
+  // Show main app
+  document.querySelector('.main-app-header').style.display = 'flex';
+  document.querySelector('.main-app').style.display = 'grid';
 
-// Close text modal when clicking outside
-textModal.addEventListener('click', (e) => {
-  if (e.target === textModal) {
-    textModal.classList.remove('active');
+  // hide classworkPage
+  classworkPage.style.display = 'none';
+  
+  //TODO: Update URL
+  //window.history.pushState({}, '', '/');
+}
+
+// Back button event
+backBtn.addEventListener('click', showMainApp);
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', (event) => {
+  if (event.state && event.state.classId) {
+    // We need to reload the content from your data
+    // For now, just show the page with whatever content we have
+    classId = event.state.classId;
+    console.log(classId);
+    showClassworkPage(event.state.type, 'Class', 'Content loaded from history', "The submission");
+  } else {
+    showMainApp();
   }
 });
 
-// Close text modal with Escape key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && textModal.classList.contains('active')) {
-    textModal.classList.remove('active');
-  }
-});
+document.addEventListener('click', (e) => {
+  // Check if the clicked element is a view-text-btn
+  if (e.target.classList.contains('view-text-btn')) {
+    const button = e.target;
+    const classCard = button.closest('.class-card, .upcoming-class-card');
+    classId = classCard?.dataset.classId || 'unknown';
+    console.log(classId);
+    submittingType = button.dataset.type; // 'classwork' or 'homework'
+    const className = classCard?.querySelector('strong')?.textContent || 'Unknown Class';
     
+    // Get the full text from data attribute
+    const fullText = button.dataset.fullText || '';
+
+    // Show the classwork page
+    showClassworkPage(submittingType, className, fullText, button.dataset.work);
+  }
+});
+
 // Open change password modal
 changePasswordBtn.addEventListener('click', () => {
   changePasswordModal.classList.add('active');
@@ -80,7 +214,6 @@ function setStatus(el, text, kind = "") {
   if (kind) el.classList.add(kind);
   el.textContent = text;
 }
-
 
 function getCookie(name) {
   return document.cookie
@@ -138,6 +271,8 @@ qs('#login-form').addEventListener('submit', async (e) => {
     setStatus(statusEl, 'Network error. See console.', 'err');
     console.error(err);
   }
+
+
 });
 
 qs('#change-form').addEventListener('submit', async (e) => {
@@ -205,6 +340,7 @@ async function loadStudents() {
 }
 
 // Handle click events for view text buttons using event delegation
+/*
 document.addEventListener('click', (e) => {
   // Check if the clicked element is a view-text-btn
   if (e.target.classList.contains('view-text-btn')) {
@@ -220,7 +356,7 @@ document.addEventListener('click', (e) => {
       // Get the full text from the data attribute or from the student data
       // For now, we'll use a placeholder - you might want to store the full text in a data attribute
       const fullText = converter.makeHtml(button.dataset.fullText) || 
-                      previewSpan.textContent.replace('...', '') + 
+                      previewSpan.textContent.replace('...', '') + index.js
                       (button.dataset.fullText ? '' : ' (Full text not loaded)');
       
       const titles = {
@@ -235,6 +371,7 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+*/
 
 function renderStudents(items) {
   if (!items?.length) {
@@ -310,30 +447,21 @@ function renderStudentDetail(s) {
   const summary = computeStudentSummary(s);
   
   // Helper function to create view buttons for long text
-  const createViewButton = (text, type, label) => {
+  const createViewButton = (text, type, label, work) => {
     if (!text || text.trim() === '') return '';
     // If text is short (less than 150 chars), show inline, otherwise show button
     return `
       <div class="class-field">
         <strong>${label}:</strong>
-        <button class="view-text-btn" data-type="${type}" data-full-text="${escapeHtml(text)}" style="
-          margin-left: 0.5rem;
-          padding: 0.25rem 0.75rem;
-          font-size: 0.85rem;
-          background: rgba(106, 165, 255, 0.15);
-          border: 1px solid var(--accent);
-          color: var(--accent);
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        ">View ${label}</button>
-        <span class="text-preview" style="
-          display: inline-block;
-          margin-left: 0.5rem;
-          color: var(--muted);
-          font-style: italic;
-          font-size: 0.9rem;
-        ">${escapeHtml(text.substring(0, 80))}...</span>
+        <button class="view-text-btn" data-type="${type}" 
+            data-full-text="${escapeHtml(text)}"
+            ${work ? `data-work="${escapeHtml(work)}"` : ''}
+        >
+            View ${label}
+        </button>
+        <span class="text-preview">
+            ${escapeHtml(text.substring(0, 80))}...
+        </span>
       </div>
     `;
   };
@@ -341,11 +469,14 @@ function renderStudentDetail(s) {
   // Create individual cards for each class
   const classCards = (s.classes || []).map(c => {
     // Store the full text in data attributes
-    const classworkBtn = createViewButton(c.classwork, 'classwork', 'Classwork');
-    const hwBtn = createViewButton(c.hw, 'homework', 'Homework');
+    console.log(c.classwork_submission);
+    const classworkBtn = createViewButton(c.classwork, 'classwork', 
+        'Classwork', c.classwork_submission);
+    const hwBtn = createViewButton(c.hw, 'homework', 
+        'Homework', c.homework_submission);
     
     return `
-      <div class="${c.status == 'upcoming' ? 'upcoming-class-card' : 'class-card'}" data-class-id="${c.id || ''}">
+      <div class="${c.status == 'upcoming' ? 'upcoming-class-card' : 'class-card'}" data-class-id="${c.class_id || ''}">
         <div class="class-card-header">
           <strong>${escapeHtml(c.name)}</strong>
           <span class="chip">${escapeHtml(c.status)}</span>
@@ -442,12 +573,21 @@ qs('#student-search').addEventListener('input', (e) => {
 
 qs('#refresh-students').addEventListener('click', loadStudents);
 
-
 (function init(){
   qs('#year').textContent = new Date().getFullYear();
   updateLoginUI();
+  classworkPage.style.display = 'none';
+  
+  // Check URL on load - if we're on a classwork/homework page, show it
+  const path = window.location.pathname;
+  const match = path.match(/\/(classwork|homework)\/(.+)/);
+  if (match) {
+    const type = match[1];
+    classId = match[2];
+    // You'd need to load the actual content here from your data
+    showClassworkPage(type, 'Loading...', 'Content would load here', "Lorem ipsum");
+  }
 })();
 
 // adding this line makes the above work somehow
 console.log('CodeAbode WebApp loaded.');
-

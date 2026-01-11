@@ -1,0 +1,815 @@
+:root {
+    --bg: #001533;
+    --panel: #121a33;
+    --panel-2: #0f1730;
+    --text: #e9eefc;
+    --accent: #6aa5ff;
+    --accent-2: #9ef0b8;
+    --muted: #8ea1c2;
+    --danger: #ff6a6a;
+    --ok: #26d07c;
+    --warning: #ffcc66;
+    --border: #22315f;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+}
+
+header {
+    background: radial-gradient(120% 120% at 0% 0%, #15234d 0%, var(--panel) 60%, #0d1530 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: 0 2px 18px rgba(0,0,0,.35);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    letter-spacing: .3px;
+    color: var(--accent);
+}
+
+header p {
+    margin: .35rem 0 0;
+    color: var(--muted);
+    font-size: .95rem;
+}
+
+main {
+    width: min(100%, 1000px);
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+}
+
+.card {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+
+.card h2 {
+    margin: 0 0 .75rem;
+    color: var(--accent);
+    font-size: 1.2rem;
+}
+
+.card p.small {
+    color: var(--muted);
+    margin: .25rem 0 1rem;
+    font-size: .9rem;
+}
+
+form {
+    display: grid;
+    gap: .8rem;
+}
+
+label {
+    font-size: .9rem;
+    color: var(--muted);
+}
+
+input[type="text"], input[type="password"], input[type="number"], input[type="search"] {
+    padding: .65rem .75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #101939;
+    color: var(--text);
+}
+
+button {
+    appearance: none;
+    border: none;
+    border-radius: 10px;
+    padding: .7rem .9rem;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: .2px;
+    transition: transform .02s ease, box-shadow .2s ease;
+    box-shadow: 0 6px 18px rgba(106,165,255,.35);
+}
+
+button:hover {
+    box-shadow: 0 6px 22px rgba(106,165,255,.5);
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    box-shadow: none;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .8rem;
+}
+
+.status {
+    margin-top: .5rem;
+    font-size: .92rem;
+    padding: .6rem .7rem;
+    border-radius: 10px;
+    background: rgba(255,255,255,.03);
+    border: 1px dashed var(--border);
+    color: var(--muted);
+}
+
+.status.ok {
+    color: #d8ffe9;
+    border-color: rgba(38,208,124,.35);
+    background: rgba(38,208,124,.08);
+}
+
+.status.err {
+    color: #ffe2e2;
+    border-color: rgba(255,106,106,.35);
+    background: rgba(255,106,106,.08);
+}
+
+.status.warn {
+    color: #fff2d6;
+    border-color: rgba(255,204,102,.35);
+    background: rgba(255,204,102,.08);
+}
+
+.students, .student-detail {
+    font-size: .95rem;
+}
+
+.students ul {
+    list-style: none;
+    padding: 0;
+    margin: .5rem 0 0;
+}
+
+.students li {
+    padding: .5rem .6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: .5rem;
+    background: #0f1836;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.students li button {
+    padding: .45rem .65rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.empty {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.progress-card {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.progress-card h2 {
+    color: var(--accent-2);
+    font-size: 1.3rem;
+}
+
+.meter {
+    height: 12px;
+    background: #0e1630;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-top: .75rem;
+}
+
+.meter > span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-2), #6ef3ff);
+    transition: width .6s ease;
+}
+
+footer {
+    color: var(--muted);
+    text-align: center;
+    padding: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    width: min(90%, 400px);
+    box-shadow: 0 12px 32px rgba(0,0,0,.4);
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1.2rem;
+}
+
+.close-modal {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.close-modal:hover {
+    background: rgba(142, 161, 194, 0.1);
+    color: var(--text);
+}
+
+/* Class cards styling */
+.classes-container {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.class-card {
+    background: linear-gradient(180deg, #0f3d3d, #0a2e2e);
+    border: 1px solid #1a5a5a;
+    border-radius: 12px;
+    padding: 1rem;
+    color: #e9f7f7;
+    box-shadow: 0 4px 12px rgba(0, 20, 20, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.class-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 20, 20, 0.4);
+}
+
+.class-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(42, 122, 122, 0.5);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.class-card-header strong {
+    color: #7fffd4;
+    font-size: 1rem;
+    flex: 1;
+}
+
+.upcoming-class-card .class-card-header strong {
+    color: #ff8c00;
+}
+
+.class-card-content {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.class-field {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.class-field strong {
+    color: #9ef0b8;
+    margin-right: 0.25rem;
+}
+
+.upcoming-class-card .class-field strong {
+    color: #ff8c00;
+}
+
+.chip-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+}
+
+/* Update existing chip styles for better visibility on teal */
+.class-card .chip {
+    background: rgba(106, 255, 255, 0.15);
+    border: 1px solid rgba(106, 255, 255, 0.3);
+    color: #e6ffff;
+}
+
+.class-card .chip-soft {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #d1ffff;
+}
+
+.upcoming-class-card .chip {
+    background: rgba(255, 165, 0, 0.15);
+    border: 1px solid rgba(255, 165, 0, 0.3);
+    color: #ffe9d1;
+}
+
+.upcoming-class-card .chip-soft {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* Small chip style for class cards */
+.class-card .chip {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.upcoming-class-card .chip {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Progress bar colors for class cards context */
+.pbar {
+    height: 10px;
+    background: #0a2e2e;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid #1a5a5a;
+}
+
+.pbar > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #7fffd4, #6ef3ff);
+}
+
+/* Future Concepts Card Styling */
+.future-concepts-card {
+    background: linear-gradient(180deg, #2a2a3a, #1f1f2e);
+    border: 1px solid #3a3a4a;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    color: #e9eefc;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.future-concepts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.concept-chip {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: #d1d8f0;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.concept-chip:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.upcoming-class-card {
+    background: linear-gradient(180deg, #3d280f, #2e1c0a);
+    border: 1px solid #5a3a1a;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    color: #fce9e9;
+    box-shadow: 0 4px 12px rgba(20, 10, 0, 0.3);
+}
+
+.upcoming-concepts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.upcoming-chip {
+    background: rgba(255, 165, 0, 0.15);
+    border: 1px solid rgba(255, 165, 0, 0.3);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: #ffd8a0;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.upcoming-chip:hover {
+    background: rgba(255, 165, 0, 0.25);
+    border-color: rgba(255, 165, 0, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 140, 0, 0.2);
+}
+
+.view-text-btn {
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+    background: rgba(106, 165, 255, 0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.text-preview {
+    display: inline-block;
+    margin-left: 0.5rem;
+    color: var(--muted);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.classwork-page {
+    display: none;
+    min-height: 100vh;
+    grid-template-rows: auto 1fr;
+}
+
+.classwork-header {
+    background: radial-gradient(120% 120% at 0% 0%, #15234d 0%, var(--panel) 60%, #0d1530 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: 0 2px 18px rgba(0,0,0,.35);
+}
+
+.classwork-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    letter-spacing: .3px;
+    color: var(--accent);
+}
+
+.back-btn {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+    background: rgba(106, 165, 255, 0.1);
+}
+
+.classwork-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    height: 100%;
+}
+
+.classwork-content {
+    flex: 1;
+    overflow-y: auto;
+  /* Changed from auto to scroll to always show scrollbar */
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 100vh;
+}
+
+.upload-section {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+/* Upload header wth My Work button */
+.upload-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.upload-header h3 {
+    margin: 0;
+    color: var(--accent-2);
+    font-size: 1rem;
+}
+
+.upload-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.my-work-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.my-work-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent);
+}
+
+.my-work-btn.active {
+    background: rgba(106, 165, 255, 0.2);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 4px 12px rgba(106, 165, 255, 0.2);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.submission-code {
+    background: #0a0f1f;
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.submission-code pre {
+    margin: 0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #9ef0b8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.submission-code code {
+    font-family: inherit;
+}
+
+/* Mobile responsiveness for upload section */
+@media (max-width: 768px) {
+    .upload-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .upload-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .my-work-btn,
+  .submit-btn {
+        flex: 1;
+        padding: 0.75rem;
+    }
+
+    .submission-code pre {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .upload-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .my-work-btn,
+  .submit-btn {
+        width: 100%;
+    }
+
+    .submission-code pre {
+        font-size: 0.8rem;
+    }
+}
+
+.submit-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.submit-btn:hover {
+    background: #5a95ff;
+}
+
+.text-input-box {
+    width: 100%;
+    min-height: 300px;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: monospace;
+    font-size: 14px;
+    resize: vertical;
+    margin-bottom: 1rem;
+}
+
+.file-upload-box {
+    width: 100%;
+    height: 200px;
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+}
+
+.file-upload-box:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.file-upload-box input {
+    display: none;
+}
+
+.or-divider {
+    text-align: center;
+    margin: 1rem 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    position: relative;
+}
+
+.or-divider::before,
+.or-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background: var(--border);
+}
+
+.or-divider::before {
+    left: 0;
+}
+
+.or-divider::after {
+    right: 0;
+}
+
+/* Mobile responsiveness for classwork page */
+@media (max-width: 768px) {
+    .classwork-container {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .classwork-content {
+        min-height: 50vh;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+    .upload-section {
+        min-height: 40vh;
+    }
+
+    .text-input-box {
+        min-height: 200px;
+    }
+
+    .file-upload-box {
+        height: 150px;
+    }
+  
+  /* Adjust header for mobile */
+    .classwork-header {
+        padding: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .classwork-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .back-btn {
+        align-self: flex-start;
+    }
+}

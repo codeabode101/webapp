@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Json, Path}, 
-    routing::post, 
+    routing::{get, post}, 
     http::StatusCode, 
     Router};
 use axum_extra::extract::cookie::{CookieJar, Cookie, SameSite};
@@ -26,7 +26,9 @@ struct StudentClass {
     classwork: Option<String>,
     notes: Option<String>,
     hw: Option<String>,
-    hw_notes: Option<String>
+    hw_notes: Option<String>,
+    classwork_submission: Option<String>,
+    homework_submission: Option<String>
 }
 
 #[derive(Serialize)]
@@ -54,11 +56,36 @@ struct LoginRequest {
     password: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct WorkRequest {
+    class_id: i32,
+    work: String,
+}
+
 #[derive(Debug, Serialize)]
 struct StudentInfo {
     id: i32,
     name: String,
 }
+
+
+#[axum::debug_handler]
+async fn classwork_page(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    cookie_jar: CookieJar,
+    Path(id): Path<i32>,
+) -> Result<String, StatusCode> {
+    todo!()
+} 
+
+#[axum::debug_handler]
+async fn homework_page(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    cookie_jar: CookieJar,
+    Path(id): Path<i32>,
+) -> Result<String, StatusCode> {
+    todo!()
+} 
 
 #[axum::debug_handler]
 async fn reset_password(
@@ -232,7 +259,9 @@ async fn get_student(
             let classes = sqlx::query_as!(
                 StudentClass,
                 "SELECT class_id, status, name, methods, stretch_methods,
-                description, classwork, notes, hw, hw_notes
+                description, classwork, notes, hw, hw_notes,
+                classwork_submission,
+                homework_submission
                 FROM students_classes 
                 WHERE student_id = $1
                 ORDER BY class_id DESC",
@@ -256,6 +285,87 @@ async fn get_student(
         },
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[axum::debug_handler]
+async fn submit_classwork(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    cookie_jar: CookieJar,
+    Json(body): Json<WorkRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    match sqlx::query!(
+        "UPDATE students_classes
+        SET classwork_submission = $1
+        WHERE class_id = $3 AND class_id = ANY(
+            SELECT class_id
+            FROM students_classes
+            WHERE student_id = ANY(
+                SELECT id FROM students
+                WHERE (
+                    SELECT user_id 
+                    FROM tokens 
+                    WHERE token = $2
+                        AND expires_at > now()
+                ) = ANY(account_id)
+            )
+        )",
+
+        body.work,
+        cookie_jar.get("token").ok_or(
+            (StatusCode::NOT_FOUND, "Token not found".to_string()))?.value(),
+        body.class_id,
+
+    ).execute(&**state).await {
+        Ok(rows) => { 
+            if rows.rows_affected() <= 0 {
+                Err((StatusCode::UNAUTHORIZED, "Something went wrong.".to_string()))
+            } else {
+                Ok(StatusCode::OK)
+            } 
+        },
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+    }
+}
+
+
+#[axum::debug_handler]
+async fn submit_homework(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    cookie_jar: CookieJar,
+    Json(body): Json<WorkRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    match sqlx::query!(
+        "UPDATE students_classes
+        SET homework_submission = $1
+        WHERE class_id = $3 AND class_id = ANY(
+            SELECT class_id
+            FROM students_classes
+            WHERE student_id = ANY(
+                SELECT id FROM students
+                WHERE (
+                    SELECT user_id 
+                    FROM tokens 
+                    WHERE token = $2
+                        AND expires_at > now()
+                ) = ANY(account_id)
+            )
+        )",
+
+        body.work,
+        cookie_jar.get("token").ok_or(
+            (StatusCode::NOT_FOUND, "Token not found".to_string()))?.value(),
+        body.class_id,
+
+    ).execute(&**state).await {
+        Ok(rows) => { 
+            if rows.rows_affected() <= 0 {
+                Err((StatusCode::UNAUTHORIZED, "Something went wrong.".to_string()))
+            } else {
+                Ok(StatusCode::OK)
+            } 
+        },
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
     }
 }
 
@@ -287,10 +397,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route_service("/", ServeFile::new("html/index.html"))
+        .route_service("/style.css", ServeFile::new("html/style.css"))
+        .route("/classwork/{id}", get(classwork_page))
+        .route("/homework/{id}", get(homework_page))
         .route("/api/reset-password", post(reset_password))
         .route("/api/login", post(login))
         .route("/api/list_students", post(list_students))
         .route("/api/get_student/{id}", post(get_student))
+        .route("/api/submit/classwork", post(submit_classwork))
+        .route("/api/submit/homework", post(submit_homework))
         .fallback_service(ServeDir::new("html"))
         .with_state(shared_state)
         ;
