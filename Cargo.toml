@@ -16,6 +16,18 @@ tokio = { version = "1.47.1", features = ["rt", "rt-multi-thread", "macros"] }
 tower-http = { version = "0.6.6", features = ["fs", "cors"] }
 tracing = "0.1.41"
 
+[dependencies.lettre]
+version = "0.11.19"
+default-features = false
+features = [
+    "async-std1", 
+    "async-std1-rustls", 
+    "builder", 
+    "ring", 
+    "rustls-platform-verifier", 
+    "smtp-transport"
+]
+
 [dependencies.sqlx]
 version = "0.8.6"
 default-features = false

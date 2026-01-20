@@ -476,10 +476,17 @@ function renderStudentDetail(s) {
         'Homework', c.homework_submission);
     
     return `
-      <div class="${c.status == 'upcoming' ? 'upcoming-class-card' : 'class-card'}" data-class-id="${c.class_id || ''}">
+      <div class="${s.current_class == c.class_id ? 'current-class-card' :
+                (c.status == 'upcoming' 
+              ? 'upcoming-class-card' 
+              : 'class-card')}" 
+            data-class-id="${c.class_id || ''}">
         <div class="class-card-header">
           <strong>${escapeHtml(c.name)}</strong>
-          <span class="chip">${escapeHtml(c.status)}</span>
+          <span class="chip">${
+                s.current_class === c.class_id ? 'current' :
+                escapeHtml(c.status)
+            }</span>
         </div>
         
         <div class="class-card-content">

@@ -8,6 +8,11 @@ use axum::{
     Router};
 use axum_extra::extract::cookie::{CookieJar, Cookie, SameSite};
 use dotenv::dotenv;
+use lettre::{
+    message::header::ContentType, 
+    transport::smtp::authentication::Credentials, 
+    AsyncSmtpTransport, AsyncStd1Executor, AsyncTransport, Message,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use time::Duration;
@@ -40,7 +45,8 @@ struct Student {
     final_goal: Arc<str>,
     future_concepts: Vec<String>,
     notes: Option<String>,
-    classes: Vec<StudentClass>
+    classes: Vec<StudentClass>,
+    current_class: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -243,7 +249,9 @@ async fn get_student(
     Path(id): Path<i32>,
 ) -> Result<String, StatusCode> {
     match sqlx::query!(
-        "SELECT name, age, current_level, final_goal, future_concepts, notes
+        "SELECT 
+            name, age, current_level, final_goal, 
+            future_concepts, notes, current_class
         FROM students 
         WHERE (
             SELECT user_id 
@@ -279,6 +287,7 @@ async fn get_student(
                 final_goal: row.final_goal.into(),
                 future_concepts: row.future_concepts.into(),
                 notes: row.notes.into(),
+                current_class: row.current_class,
                 classes,
             };
             Ok(serde_json::to_string(&student).unwrap())
@@ -395,6 +404,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    /*
+    let email = Message::builder()
+        .from("Codeabode <codeabode101@gmail.com>".parse().unwrap())
+        .to("Om Raheja <rahejaom@outlook.com>".parse().unwrap())
+        .subject("Happy new async year")
+        .header(ContentType::TEXT_PLAIN)
+        .body(String::from("Be happy with async!"))
+        .unwrap();
+
+    let creds = Credentials::new(
+        env::var("EMAIL_ADDRESS").expect("EMAIL_ADDRESS must be set").to_owned(), 
+        env::var("EMAIL_PASSWORD").expect("EMAIL_PASSWORD must be set").to_owned()
+    );
+
+    // Open a remote connection to gmail
+    let mailer: AsyncSmtpTransport<AsyncStd1Executor> =
+        AsyncSmtpTransport::<AsyncStd1Executor>::relay("smtp.gmail.com")
+            .unwrap()
+            .credentials(creds)
+            .build();
+
+    // Send the email
+    match mailer.send(email).await {
+        Ok(_) => println!("Email sent successfully!"),
+        Err(e) => panic!("Could not send email: {e:?}"),
+    }
+    */
+
     let app = Router::new()
         .route_service("/", ServeFile::new("html/index.html"))
         .route_service("/style.css", ServeFile::new("html/style.css"))
@@ -409,6 +446,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .fallback_service(ServeDir::new("html"))
         .with_state(shared_state)
         ;
+
+    info!("Initialized routes");
 
     if let Some(socket_path) = unix_socket {
         // delete the file before binding

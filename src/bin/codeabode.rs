@@ -7,7 +7,7 @@ use gemini_client_api::gemini::{
         sessions::Session,
     },
 };
-use sqlx::postgres::PgPoolOptions;
+use sqlx::{postgres::PgPoolOptions};
 use std::{
     env,
     io::{self, Write},
@@ -27,6 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let matches = Command::new("codeabode")
         .subcommand(Command::new("add").about("Add a new user"))
+        .subcommand(Command::new("edit").about("Edit user's student associations"))
         .subcommand(Command::new("reset")
                         .aliases(["r", "reset-password"])
                         .about("Reset user password"))
@@ -46,6 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match matches.subcommand() {
         Some(("add", _)) => add_user(db).await?,
+        Some(("edit", _)) => edit_user_students(db).await?,
         Some(("reset", _)) => reset_pswd(db).await?,
         Some(("curriculum", _)) => curriculum(db).await?,
         _ => {
@@ -170,6 +172,200 @@ async fn reset_pswd(
     .await?;
 
     println!("{} rows affected", query.rows_affected());
+
+    Ok(())
+}
+
+async fn edit_user_students(db: sqlx::PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    // List all users
+    let users = sqlx::query!(
+        "SELECT id, username, name
+        FROM accounts
+        ORDER BY id"
+    )
+    .fetch_all(&db)
+    .await?;
+
+    if users.is_empty() {
+        println!("No users found.");
+        return Ok(());
+    }
+
+    println!("Available users:");
+    for (i, user) in users.iter().enumerate() {
+        println!("({}) {} - {}", i, user.username, user.name);
+    }
+
+    let mut user_choice = String::new();
+    get_response("Select user number to edit", &mut user_choice)?;
+    let user_idx = user_choice.trim().parse::<usize>()?;
+    
+    if user_idx >= users.len() {
+        println!("Invalid selection");
+        return Ok(());
+    }
+
+    let selected_user = &users[user_idx];
+
+    // Show current students for this user
+    let current_students = sqlx::query!(
+        "SELECT s.id, s.name
+        FROM students s
+        WHERE $1 = ANY(s.account_id)
+        ORDER BY s.id",
+        selected_user.id
+    )
+    .fetch_all(&db)
+    .await?;
+
+    println!("\nUser: {} ({})", selected_user.username, selected_user.name);
+    println!("Currently associated students:");
+    
+    if current_students.is_empty() {
+        println!("  No students associated");
+    } else {
+        for student in &current_students {
+            println!("  {}: {}", student.id, student.name);
+        }
+    }
+
+    // Ask for action
+    println!("\nOptions:");
+    println!("  (a)dd a student");
+    println!("  (r)emove a student");
+    println!("  (c)ancel");
+
+    let mut action = String::new();
+    get_response("Choose action", &mut action)?;
+    let action = action.trim().to_lowercase();
+
+    match action.as_str() {
+        "a" | "add" => add_student_to_user(db, selected_user.id).await?,
+        "r" | "remove" => remove_student_from_user(db, selected_user.id).await?,
+        "c" | "cancel" => println!("Operation cancelled"),
+        _ => println!("Invalid action"),
+    }
+
+    Ok(())
+}
+
+async fn add_student_to_user(
+    db: sqlx::PgPool,
+    user_id: i32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Get all students NOT currently associated with this user
+    // We need to handle the case where account_id might be NULL
+    let available_students = sqlx::query!(
+        "SELECT s.id, s.name
+        FROM students s
+        WHERE s.account_id IS NULL 
+           OR NOT (s.account_id @> ARRAY[$1::integer])
+        ORDER BY s.id",
+        user_id
+    )
+    .fetch_all(&db)
+    .await?;
+
+    if available_students.is_empty() {
+        println!("No available students to add.");
+        return Ok(());
+    }
+
+    println!("\nAvailable students to add:");
+    for (i, student) in available_students.iter().enumerate() {
+        println!("({}) {}: {}", i, student.id, student.name);
+    }
+
+    let mut student_choice = String::new();
+    get_response("Select student number to add", &mut student_choice)?;
+    let student_idx = student_choice.trim().parse::<usize>()?;
+    
+    if student_idx >= available_students.len() {
+        println!("Invalid selection");
+        return Ok(());
+    }
+
+    let selected_student_id = available_students[student_idx].id;
+
+    // Add the user to the student's account_id array
+    let result = sqlx::query!(
+        "UPDATE students
+         SET account_id = 
+             CASE 
+                 WHEN account_id IS NULL THEN ARRAY[$1::integer]
+                 WHEN NOT (account_id @> ARRAY[$1::integer]) THEN account_id || $1
+                 ELSE account_id
+             END
+         WHERE id = $2
+         RETURNING id",
+        user_id,
+        selected_student_id
+    )
+    .fetch_optional(&db)
+    .await?;
+
+    if result.is_some() {
+        println!("Student added successfully!");
+    } else {
+        println!("Failed to add student. Student may already be associated.");
+    }
+
+    Ok(())
+}
+
+async fn remove_student_from_user(
+    db: sqlx::PgPool,
+    user_id: i32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Get current students for this user
+    let current_students = sqlx::query!(
+        "SELECT s.id, s.name
+        FROM students s
+        WHERE $1 = ANY(s.account_id)
+        ORDER BY s.id",
+        user_id
+    )
+    .fetch_all(&db)
+    .await?;
+
+    if current_students.is_empty() {
+        println!("No students to remove.");
+        return Ok(());
+    }
+
+    println!("\nCurrent students (can be removed):");
+    for (i, student) in current_students.iter().enumerate() {
+        println!("({}) {}: {}", i, student.id, student.name);
+    }
+
+    let mut student_choice = String::new();
+    get_response("Select student number to remove", &mut student_choice)?;
+    let student_idx = student_choice.trim().parse::<usize>()?;
+    
+    if student_idx >= current_students.len() {
+        println!("Invalid selection");
+        return Ok(());
+    }
+
+    let selected_student_id = current_students[student_idx].id;
+
+    // Remove the user from the student's account_id array
+    let result = sqlx::query!(
+        "UPDATE students
+         SET account_id = array_remove(account_id, $1)
+         WHERE id = $2
+         RETURNING id",
+        user_id,
+        selected_student_id
+    )
+    .fetch_optional(&db)
+    .await?;
+
+    if result.is_some() {
+        println!("Student removed successfully!");
+    } else {
+        println!("Failed to remove student.");
+    }
 
     Ok(())
 }
