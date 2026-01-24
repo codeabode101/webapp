@@ -162,9 +162,10 @@ document.addEventListener('click', (e) => {
   // Check if the clicked element is a view-text-btn
   if (e.target.classList.contains('view-text-btn')) {
     const button = e.target;
-    const classCard = button.closest('.class-card, .upcoming-class-card');
+    const classCard = button.closest('.class-card, .current-class-card, .upcoming-class-card');
+
     classId = classCard?.dataset.classId || 'unknown';
-    console.log(classId);
+
     submittingType = button.dataset.type; // 'classwork' or 'homework'
     const className = classCard?.querySelector('strong')?.textContent || 'Unknown Class';
     
