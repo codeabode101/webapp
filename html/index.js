@@ -491,11 +491,11 @@ function renderStudentDetail(s) {
         </div>
         
         <div class="class-card-content">
-          ${c.description ? `<div class="class-field"><strong>Description:</strong> ${escapeHtml(c.description)}</div>` : ''}
+          ${c.description ? `<div class="class-field">${escapeHtml(c.description)}</div>` : ''}
           
           ${c.methods?.length ? `
             <div class="class-field">
-              <strong>Methods:</strong>
+              <strong>Objectives:</strong>
               <div class="chip-container">
                 ${c.methods.map(m => `<span class="chip chip-soft">${escapeHtml(m)}</span>`).join('')}
               </div>
@@ -503,7 +503,7 @@ function renderStudentDetail(s) {
           
           ${c.stretch_methods?.length ? `
             <div class="class-field">
-              <strong>Stretch Methods:</strong>
+              <strong>Stretch Objectives:</strong>
               <div class="chip-container">
                 ${c.stretch_methods.map(m => `<span class="chip chip-soft">${escapeHtml(m)}</span>`).join('')}
               </div>

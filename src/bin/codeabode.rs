@@ -19,6 +19,47 @@ use webapp::{
     CURCGPT_FORMAT,
 };
 
+// Yes/no prompt macro
+macro_rules! yes_no {
+    ($prompt:expr) => {{
+        loop {
+            print!("{} [Y/n]: ", $prompt);
+            io::stdout().flush()?;
+            
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            
+            match input.trim().to_lowercase().as_str() {
+                "y" | "yes" | "" => break true,
+                "n" | "no" => break false,
+                _ => println!("Invalid input. Please enter 'y' or 'n'"),
+            }
+        }
+    }};
+    ($prompt:expr, $default_yes:expr) => {{
+        loop {
+            let prompt_str = if $default_yes {
+                format!("{} [Y/n]: ", $prompt)
+            } else {
+                format!("{} [y/N]: ", $prompt)
+            };
+            
+            print!("{}", prompt_str);
+            io::stdout().flush()?;
+            
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            
+            match input.trim().to_lowercase().as_str() {
+                "y" | "yes" => break true,
+                "n" | "no" => break false,
+                "" => break $default_yes,
+                _ => println!("Invalid input. Please enter 'y' or 'n'"),
+            }
+        }
+    }};
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -28,6 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = Command::new("codeabode")
         .subcommand(Command::new("add").about("Add a new user"))
         .subcommand(Command::new("edit").about("Edit user's student associations"))
+        .subcommand(Command::new("email").about("Modify the user's email"))
         .subcommand(Command::new("reset")
                         .aliases(["r", "reset-password"])
                         .about("Reset user password"))
@@ -48,6 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match matches.subcommand() {
         Some(("add", _)) => add_user(db).await?,
         Some(("edit", _)) => edit_user_students(db).await?,
+        Some(("email", _)) => edit_user_email(db).await?,
         Some(("reset", _)) => reset_pswd(db).await?,
         Some(("curriculum", _)) => curriculum(db).await?,
         _ => {
@@ -56,6 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
+
 
 async fn add_user(
     db: sqlx::PgPool,
@@ -69,21 +113,31 @@ async fn add_user(
     let mut password = String::new();
     get_response("Enter password", &mut password)?;
 
+    // Ask for email
+    let email = if yes_no!("Do you want to add an email?", false) {
+        let mut email_input = String::new();
+        get_response("Enter email", &mut email_input)?;
+        Some(email_input.trim().to_string())
+    } else {
+        None
+    };
+
     match sqlx::query!(
         "INSERT INTO accounts 
-        (username, name, password) 
-        VALUES ($1, $2, digest($3, 'sha512'))
+        (username, name, password, email) 
+        VALUES ($1, $2, digest($3, 'sha512'), $4)
         RETURNING id",
         username.trim(),
         name.trim(),
-        password.trim()
+        password.trim(),
+        email  // This will be NULL in the database if None
     )
     .fetch_one(&db)
     .await {
         Ok(row) => {
             println!("User created with id: {}", row.id);
 
-            // list all students 
+            // List all students
             let students = sqlx::query!(
                 "SELECT id, name
                 FROM students"
@@ -91,48 +145,63 @@ async fn add_user(
             .fetch_all(&db)
             .await?;
 
-            let mut i = 0;
-            while i < students.len() {
-                println!("({}) {}: {}", i, students[i].id, students[i].name);
-                i += 1;
+            if !students.is_empty() {
+                for (i, student) in students.iter().enumerate() {
+                    println!("({}) {}: {}", i, student.id, student.name);
+                }
+            } else {
+                println!("No students found in the database.");
             }
 
-            loop {
-                print!("Would you like to add a student? [Y/n]: ");
-                io::stdout().flush()?;
+            // Ask if user wants to add students
+            if yes_no!("Would you like to add a student?", false) && !students.is_empty() {
+                loop {
+                    // Show students again for reference
+                    for (i, student) in students.iter().enumerate() {
+                        println!("({}) {}: {}", i, student.id, student.name);
+                    }
 
-                let mut input = String::new();
-                io::stdin().read_line(&mut input)?;
+                    let mut student_input = String::new();
+                    get_response("Enter student number (or 'q' to quit)", &mut student_input)?;
+                    
+                    if student_input.trim().eq_ignore_ascii_case("q") {
+                        break;
+                    }
 
-                match input.to_lowercase().trim() {
-                    "y" | "yes" | "" => {
-                        let mut student_id = String::new();
-                        get_response("Enter student id", &mut student_id)?;
-                        let student_id_int = student_id.trim().parse::<usize>()?;
-                        sqlx::query!(
-                            "UPDATE students
-                             SET account_id = 
-                                 CASE 
-                                     WHEN account_id IS NULL THEN ARRAY[$1::integer]
-                                     WHEN NOT (account_id @> ARRAY[$1]) THEN account_id || $1
-                                     ELSE account_id
-                                 END
-                             WHERE id = $2",
-                            row.id,
-                            students[student_id_int].id
-                        )
-                        .execute(&db)
-                        .await?;
-                    },
-                    "n" | "no" => break, 
-                    _ => {
-                        println!("Invalid input");
-                        continue;
+                    match student_input.trim().parse::<usize>() {
+                        Ok(student_id_int) if student_id_int < students.len() => {
+                            sqlx::query!(
+                                "UPDATE students
+                                 SET account_id = 
+                                     CASE 
+                                         WHEN account_id IS NULL THEN ARRAY[$1::integer]
+                                         WHEN NOT (account_id @> ARRAY[$1]) THEN account_id || $1
+                                         ELSE account_id
+                                     END
+                                 WHERE id = $2",
+                                row.id,
+                                students[student_id_int].id
+                            )
+                            .execute(&db)
+                            .await?;
+                            println!("Student added successfully!");
+                            
+                            // Ask if they want to add another
+                            if !yes_no!("Add another student?", false) {
+                                break;
+                            }
+                        }
+                        Ok(_) => {
+                            println!("Invalid student number. Please try again.");
+                        }
+                        Err(_) => {
+                            println!("Please enter a valid number or 'q' to quit.");
+                        }
                     }
                 }
-            };
+            }
         },
-        Err(e) => eprintln!("{}", e),
+        Err(e) => eprintln!("Error creating user: {}", e),
     }
 
     Ok(())
@@ -246,6 +315,157 @@ async fn edit_user_students(db: sqlx::PgPool) -> Result<(), Box<dyn std::error::
         _ => println!("Invalid action"),
     }
 
+    Ok(())
+}
+
+async fn edit_user_email(db: sqlx::PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    // First, list users so they can choose which one to edit
+    println!("Fetching users...");
+    
+    let users = sqlx::query!(
+        "SELECT id, username, name, email 
+         FROM accounts 
+         ORDER BY id"
+    )
+    .fetch_all(&db)
+    .await?;
+    
+    if users.is_empty() {
+        println!("No users found in the database.");
+        return Ok(());
+    }
+    
+    // Display users with their current email status
+    println!("\nCurrent users:");
+    println!("{:<5} {:<20} {:<20} {:<30}", "ID", "Username", "Name", "Email");
+    println!("{}", "-".repeat(80));
+    
+    for user in &users {
+        let email_display = match &user.email {
+            Some(email) => email,
+            None => "(not set)",
+        };
+        println!("{:<5} {:<20} {:<20} {:<30}", 
+                 user.id, user.username, user.name, email_display);
+    }
+    
+    // Let user select which user to edit
+    let mut user_input = String::new();
+    get_response("\nEnter user ID to edit (or 'q' to quit)", &mut user_input)?;
+    
+    if user_input.trim().eq_ignore_ascii_case("q") {
+        println!("Operation cancelled.");
+        return Ok(());
+    }
+    
+    let user_id: i32 = match user_input.trim().parse() {
+        Ok(id) => id,
+        Err(_) => {
+            println!("Invalid ID. Please enter a number.");
+            return Ok(());
+        }
+    };
+    
+    // Find the selected user
+    let selected_user = users.iter().find(|u| u.id == user_id);
+    
+    match selected_user {
+        Some(user) => {
+            println!("\nEditing user: {} (ID: {})", user.username, user.id);
+            
+            // Show current email
+            match &user.email {
+                Some(email) => println!("Current email: {}", email),
+                None => println!("Current email: (not set)"),
+            }
+            
+            // Ask if they want to change the email
+            if yes_no!("Do you want to change the email?", false) {
+                // Ask what they want to do with the email
+                println!("\nOptions:");
+                println!("1. Set new email");
+                println!("2. Clear email (set to NULL)");
+                println!("3. Cancel");
+                
+                let mut option_input = String::new();
+                get_response("Enter option number", &mut option_input)?;
+                
+                match option_input.trim() {
+                    "1" => {
+                        // Set new email
+                        let mut new_email = String::new();
+                        get_response("Enter new email address", &mut new_email)?;
+                        
+                        let email_trimmed = new_email.trim();
+                        
+                        if email_trimmed.is_empty() {
+                            println!("Email cannot be empty. Use option 2 to clear email instead.");
+                            return Ok(());
+                        }
+                        
+                        // Update with new email
+                        match sqlx::query!(
+                            "UPDATE accounts 
+                             SET email = $1 
+                             WHERE id = $2 
+                             RETURNING id, email",
+                            email_trimmed,
+                            user.id
+                        )
+                        .fetch_one(&db)
+                        .await {
+                            Ok(updated) => {
+                                match updated.email {
+                                    Some(email) => println!("✅ Email updated to: {}", email),
+                                    None => println!("✅ Email cleared"),
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("❌ Error updating email: {}", e);
+                                return Err(Box::new(e));
+                            }
+                        }
+                    }
+                    "2" => {
+                        // Clear email (set to NULL)
+                        if yes_no!("Are you sure you want to clear the email?", false) {
+                            match sqlx::query!(
+                                "UPDATE accounts 
+                                 SET email = NULL 
+                                 WHERE id = $1 
+                                 RETURNING id, email",
+                                user.id
+                            )
+                            .fetch_one(&db)
+                            .await {
+                                Ok(_) => {
+                                    println!("✅ Email cleared successfully.");
+                                }
+                                Err(e) => {
+                                    eprintln!("❌ Error clearing email: {}", e);
+                                    return Err(Box::new(e));
+                                }
+                            }
+                        } else {
+                            println!("Operation cancelled.");
+                        }
+                    }
+                    "3" => {
+                        println!("Operation cancelled.");
+                    }
+                    _ => {
+                        println!("Invalid option selected.");
+                    }
+                }
+            } else {
+                println!("Email not changed.");
+            }
+        }
+        None => {
+            println!("User with ID {} not found.", user_id);
+        }
+    }
+    
     Ok(())
 }
 
