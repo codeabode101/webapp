@@ -8,14 +8,15 @@ use axum::{
     Router};
 use axum_extra::extract::cookie::{CookieJar, Cookie, SameSite};
 use dotenv::dotenv;
-use lettre::{
-    message::header::ContentType, 
-    transport::smtp::authentication::Credentials, 
-    AsyncSmtpTransport, AsyncStd1Executor, AsyncTransport, Message,
-};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
-use time::Duration;
+use sqlx::{
+    postgres::PgPoolOptions,
+    types::{Json as SqlxJson, time::OffsetDateTime},
+};
+use time::{
+    Duration,
+    serde::iso8601,
+};
 use tokio::net::{TcpListener, UnixListener}; 
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
@@ -74,24 +75,42 @@ struct StudentInfo {
     name: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct QuestionRequest {
+    work_type: String, // classwork or homework, it'll just pull the latest from the database and
+    class_id: i32,
+    error: String,
+    interpretation: String,
+    question: String,
+}
 
-#[axum::debug_handler]
-async fn classwork_page(
-    state: axum::extract::State<Arc<sqlx::PgPool>>,
-    cookie_jar: CookieJar,
-    Path(id): Path<i32>,
-) -> Result<String, StatusCode> {
-    todo!()
-} 
+#[derive(Debug, Deserialize)]
+struct CommentRequest {
+    question_id: i32,
+    comment: String,
+}
 
-#[axum::debug_handler]
-async fn homework_page(
-    state: axum::extract::State<Arc<sqlx::PgPool>>,
-    cookie_jar: CookieJar,
-    Path(id): Path<i32>,
-) -> Result<String, StatusCode> {
-    todo!()
-} 
+#[derive(Debug, Deserialize, Serialize)]
+struct Comment {
+    id: i32,
+    account_name: Option<String>,
+    comment: String,
+    #[serde(with = "iso8601")]
+    created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+struct QuestionWithComments {
+    id: i32,
+    student_name: String,
+    error: Option<String>,
+    interpretation: Option<String>,
+    work: Option<String>,
+    question: String,
+    #[serde(with = "iso8601")]
+    created_at: OffsetDateTime,
+    comments: SqlxJson<Vec<Comment>>, // wraps the Vec so it can be decoded from JSON
+}
 
 #[axum::debug_handler]
 async fn reset_password(
@@ -268,8 +287,22 @@ async fn get_student(
                 StudentClass,
                 "SELECT class_id, status, name, methods, stretch_methods,
                 description, classwork, notes, hw, hw_notes,
-                classwork_submission,
-                homework_submission
+                (
+                    SELECT work 
+                    FROM submissions 
+                    WHERE class_id = class_id 
+                    AND work_type = 'classwork'
+                    ORDER BY id DESC 
+                    LIMIT 1
+                ) as classwork_submission,
+                (
+                    SELECT work  
+                    FROM submissions 
+                    WHERE class_id = class_id 
+                    AND work_type = 'homework'
+                    ORDER BY id DESC 
+                    LIMIT 1
+                ) as homework_submission
                 FROM students_classes 
                 WHERE student_id = $1
                 ORDER BY class_id DESC",
@@ -298,33 +331,34 @@ async fn get_student(
 }
 
 #[axum::debug_handler]
-async fn submit_classwork(
+async fn submit_work(
     state: axum::extract::State<Arc<sqlx::PgPool>>,
     cookie_jar: CookieJar,
+    Path(work_type): Path<String>,
     Json(body): Json<WorkRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     match sqlx::query!(
-        "UPDATE students_classes
-        SET classwork_submission = $1
-        WHERE class_id = $3 AND class_id = ANY(
-            SELECT class_id
-            FROM students_classes
-            WHERE student_id = ANY(
-                SELECT id FROM students
-                WHERE (
-                    SELECT user_id 
-                    FROM tokens 
-                    WHERE token = $2
-                        AND expires_at > now()
-                ) = ANY(account_id)
-            )
-        )",
+        "WITH token_user AS (
+            SELECT user_id
+            FROM tokens
+            WHERE token = $2 AND expires_at > now()
+        ),
+        authorized AS (
+            SELECT sc.class_id
+            FROM students_classes sc
+            JOIN students s ON s.id = sc.student_id
+            WHERE sc.class_id = $3
+              AND (SELECT user_id FROM token_user) = ANY(s.account_id)
+        )
+        INSERT INTO submissions (work, work_type, account_id, class_id)
+        SELECT $1, $4, (SELECT user_id FROM token_user), $3
+        WHERE EXISTS (SELECT 1 FROM authorized)",
 
         body.work,
         cookie_jar.get("token").ok_or(
             (StatusCode::NOT_FOUND, "Token not found".to_string()))?.value(),
         body.class_id,
-
+        work_type,
     ).execute(&**state).await {
         Ok(rows) => { 
             if rows.rows_affected() <= 0 {
@@ -337,45 +371,147 @@ async fn submit_classwork(
     }
 }
 
-
 #[axum::debug_handler]
-async fn submit_homework(
+async fn submit_question(
     state: axum::extract::State<Arc<sqlx::PgPool>>,
     cookie_jar: CookieJar,
-    Json(body): Json<WorkRequest>,
-) -> Result<StatusCode, (StatusCode, String)> {
+    Json(body): Json<QuestionRequest>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
     match sqlx::query!(
-        "UPDATE students_classes
-        SET homework_submission = $1
-        WHERE class_id = $3 AND class_id = ANY(
-            SELECT class_id
-            FROM students_classes
-            WHERE student_id = ANY(
-                SELECT id FROM students
-                WHERE (
-                    SELECT user_id 
-                    FROM tokens 
-                    WHERE token = $2
-                        AND expires_at > now()
-                ) = ANY(account_id)
-            )
-        )",
-
-        body.work,
+        r#"
+        WITH token_user AS (
+            SELECT user_id
+            FROM tokens
+            WHERE token = $1 AND expires_at > now()
+        )
+        INSERT INTO questions (account_id, submission_id, error, interpretation, question)
+        SELECT
+            token_user.user_id,
+            sub.id,
+            $4, $5, $6
+        FROM token_user
+        LEFT JOIN LATERAL (
+            SELECT s.id
+            FROM submissions s
+            JOIN students_classes sc ON sc.class_id = s.class_id
+            WHERE s.work_type = $3
+            ORDER BY s.id DESC
+            LIMIT 1
+        ) sub ON true
+        WHERE EXISTS (
+            SELECT 1
+            FROM students
+            WHERE id = (
+                SELECT student_id 
+                FROM students_classes 
+                WHERE class_id = $2
+            ) 
+            AND token_user.user_id = ANY(account_id)
+        )        
+        RETURNING created_at
+        "#,
         cookie_jar.get("token").ok_or(
             (StatusCode::NOT_FOUND, "Token not found".to_string()))?.value(),
         body.class_id,
-
-    ).execute(&**state).await {
-        Ok(rows) => { 
-            if rows.rows_affected() <= 0 {
-                Err((StatusCode::UNAUTHORIZED, "Something went wrong.".to_string()))
-            } else {
-                Ok(StatusCode::OK)
-            } 
-        },
+        body.work_type,
+        body.error,
+        body.interpretation,
+        body.question,
+    ).fetch_optional(&**state).await {
+        Ok(Some(rows)) => Ok((StatusCode::OK, format!("{}", rows.created_at))), 
+        Ok(None) => Err((StatusCode::NOT_FOUND, "Something went wrong.".to_string())),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
     }
+} 
+
+
+#[axum::debug_handler]
+async fn submit_comment(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    cookie_jar: CookieJar,
+    Json(body): Json<CommentRequest>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    match sqlx::query!(
+        r#"
+        WITH token_user AS (
+            SELECT user_id
+            FROM tokens
+            WHERE token = $1 AND expires_at > now()
+        )
+        INSERT INTO comments (account_id, question_id, comment)
+        SELECT
+            token_user.user_id,
+            $2,
+            $3
+        FROM token_user
+        RETURNING created_at
+        "#,
+        cookie_jar.get("token").ok_or(
+            (StatusCode::NOT_FOUND, "Token not found".to_string()))?.value(),
+        body.question_id,
+        body.comment,
+    ).fetch_optional(&**state).await {
+        Ok(Some(rows)) => Ok((StatusCode::OK, format!("{}", rows.created_at))),
+        Ok(None) => Err((StatusCode::UNAUTHORIZED, "Something went wrong.".to_string())),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+    }
+} 
+
+#[axum::debug_handler]
+async fn get_questions(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    jar: CookieJar,
+) -> Result<Json<Vec<QuestionWithComments>>, (StatusCode, String)> {
+    let token = jar
+        .get("token")
+        .ok_or((StatusCode::UNAUTHORIZED, "No token".to_string()))?
+        .value()
+        .to_string();
+
+    let questions = sqlx::query_as!(
+        QuestionWithComments,
+        r#"
+        SELECT 
+            q.id,
+            st.name AS "student_name!",
+            q.error,
+            q.interpretation,
+            q.question,
+            s.work AS "work?",                  
+            (q.created_at AT TIME ZONE 'UTC') AS "created_at!",
+            COALESCE(
+                (
+                    SELECT json_agg(
+                        json_build_object(
+                            'id', c.id,
+                            'account_name', a.name,
+                            'comment', c.comment,
+                            'created_at', (c.created_at AT TIME ZONE 'UTC')
+                        ) ORDER BY c.created_at ASC
+                    )
+                    FROM comments c
+                    LEFT JOIN accounts a ON a.id = c.account_id
+                    WHERE c.question_id = q.id
+                ), '[]'::json
+            ) AS "comments!: SqlxJson<Vec<Comment>>"
+        FROM questions q
+        LEFT JOIN submissions s ON s.id = q.submission_id
+        LEFT JOIN students_classes sc ON sc.class_id = s.class_id
+        LEFT JOIN students st ON st.id = sc.student_id
+        WHERE EXISTS (
+            SELECT 1
+            FROM tokens
+            WHERE token = $1 AND expires_at > now()
+        )
+        ORDER BY q.created_at DESC
+        "#,
+        token,   // bind the token value
+    )
+    .fetch_all(&**state)
+    .await
+    .map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
+
+    Ok(Json(questions))
 }
 
 #[tokio::main]
@@ -404,46 +540,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    /*
-    let email = Message::builder()
-        .from("Codeabode <codeabode101@gmail.com>".parse().unwrap())
-        .to("Om Raheja <rahejaom@outlook.com>".parse().unwrap())
-        .subject("Happy new async year")
-        .header(ContentType::TEXT_PLAIN)
-        .body(String::from("Be happy with async!"))
-        .unwrap();
-
-    let creds = Credentials::new(
-        env::var("EMAIL_ADDRESS").expect("EMAIL_ADDRESS must be set").to_owned(), 
-        env::var("EMAIL_PASSWORD").expect("EMAIL_PASSWORD must be set").to_owned()
-    );
-
-    // Open a remote connection to gmail
-    let mailer: AsyncSmtpTransport<AsyncStd1Executor> =
-        AsyncSmtpTransport::<AsyncStd1Executor>::relay("smtp.gmail.com")
-            .unwrap()
-            .credentials(creds)
-            .build();
-
-    // Send the email
-    match mailer.send(email).await {
-        Ok(_) => println!("Email sent successfully!"),
-        Err(e) => panic!("Could not send email: {e:?}"),
-    }
-    */
-
     let app = Router::new()
-        .route_service("/", ServeFile::new("html/index.html"))
-        .route_service("/style.css", ServeFile::new("html/style.css"))
-        .route("/classwork/{id}", get(classwork_page))
-        .route("/homework/{id}", get(homework_page))
+        .route_service("/", ServeFile::new("frontend/out/index.html"))
+        //.route_service("/style.css", ServeFile::new("/style.css"))
         .route("/api/reset-password", post(reset_password))
         .route("/api/login", post(login))
         .route("/api/list_students", post(list_students))
         .route("/api/get_student/{id}", post(get_student))
-        .route("/api/submit/classwork", post(submit_classwork))
-        .route("/api/submit/homework", post(submit_homework))
-        .fallback_service(ServeDir::new("html"))
+        .route("/api/submit/{type}", post(submit_work))
+        .route("/api/ask", post(submit_question))
+        .route("/api/comment", post(submit_comment))
+        .route("/api/get_questions", get(get_questions))
+        .fallback_service(ServeDir::new("frontend/out"))
         .with_state(shared_state)
         ;
 

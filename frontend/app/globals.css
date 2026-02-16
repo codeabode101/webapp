@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
     --bg: #001533;
     --panel: #121a33;
@@ -29,7 +31,7 @@ body {
 header {
     background: radial-gradient(120% 120% at 0% 0%, #15234d 0%, var(--panel) 60%, #0d1530 100%);
     border-bottom: 1px solid var(--border);
-    padding: 1.25rem 1.5rem;
+    padding: 0.75rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -554,8 +556,8 @@ footer {
 
 .back-btn {
     background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--accent);
+    color: var(--accent-2);
+    border: 1px solid var(--accent-2);
     padding: 0.5rem 1rem;
     border-radius: 8px;
     cursor: pointer;
@@ -640,6 +642,38 @@ footer {
     border-color: var(--accent);
     color: var(--accent);
     box-shadow: 0 4px 12px rgba(106, 165, 255, 0.2);
+}
+
+.ask-btn {
+    background: #d63384; /* vibrant pink with good contrast */
+    border: 1px solid #a61e6d; /* darker pink border */
+    color: #ffffff;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.ask-btn:hover {
+    background: #c2257c; /* slightly darker */
+    border-color: #8b1a5b;
+    color: #ffffff;
+}
+
+.ask-btn:active {
+    transform: translateY(1px);
+    background: #a61e6d; /* even darker */
+}
+
+.ask-btn.active {
+    background: #d63384;
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(214, 51, 132, 0.4);
+    color: #ffffff;
 }
 
 @keyframes slideDown {
@@ -836,4 +870,28 @@ footer {
     .back-btn {
         align-self: flex-start;
     }
+}
+
+.nav-link {
+    background: transparent;
+    color: var(--accent);
+    border: none;
+    text-decoration: underline; /* optional */
+    font-weight: 500;
+    padding: 0.2rem 0.5rem;  /* reduced padding */
+    cursor: pointer;
+    transition: color 0.2s ease;
+    border-radius: 4px;       /* subtle rounding, optional */
+    display: inline-flex;
+    align-items: center;
+    box-shadow: none;          /* remove button shadow */
+}
+
+.nav-link:hover {
+    color: #8bb9ff;            /* lighter accent */
+    background: rgba(106, 165, 255, 0.1);
+}
+
+.nav-link:active {
+    transform: none;            /* prevent button push */
 }

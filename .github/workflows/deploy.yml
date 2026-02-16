@@ -1,4 +1,4 @@
-name: Rust
+name: Rust + Next.js Build and Deploy
 
 on:
   push:
@@ -16,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Cache Rust dependencies
     - name: Cargo Cache
       uses: actions/cache@v4.2.4
       with:
@@ -34,51 +38,70 @@ jobs:
           ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.toml') }}
           ${{ runner.os }}-cargo-target
 
+    # Setup Node.js for Next.js
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
 
-    - uses: actions/checkout@v4
-    - name: Build
+    # Install frontend dependencies
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: npm ci
+
+    # Build Next.js static export
+    - name: Build Next.js
+      working-directory: frontend
+      run: npm run build
+      # This should output to frontend/out (as configured in next.config.js)
+
+    # Build Rust backend with database migrations
+    - name: Build Rust backend
       run: |
         cargo install sqlx-cli --no-default-features --features native-tls,postgres
         sqlx database create
         sqlx migrate run
-        cargo build --release 
+        cargo build --release
         mv target/release/webapp .
 
-    - name: SSH Remote Commands
+    # Prepare deployment artifacts
+    - name: Prepare deployment folder
+      run: |
+        mkdir -p deploy/frontend/out
+        cp webapp deploy/
+        cp -r frontend/out/* deploy/frontend/out/
+
+    # Ensure remote directories exist
+    - name: Create remote directories
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        timeout: 5m 
+        timeout: 5m
         script: |
-          mkdir -p $HOME/codeabode/html
+          mkdir -p $HOME/codeabode/frontend/out
 
-    - name: Copy files via SSH
+    # Copy backend binary and frontend static files
+    - name: Copy files via SCP
       uses: appleboy/scp-action@v1
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        source: "html/*"
+        source: "deploy/*"
         target: codeabode/
-        
-    - name: Copy files via SSH
-      uses: appleboy/scp-action@v1
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        source: "webapp"
-        target: codeabode/
+        strip_components: 1  # removes the 'deploy/' prefix
 
-    - name: SSH Remote Commands
+    # Restart the service
+    - name: Restart service
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        timeout: 5m 
+        timeout: 5m
         script: |
           sudo systemctl restart codeabode
-    

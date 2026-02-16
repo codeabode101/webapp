@@ -41,4 +41,4 @@ features = ["cookie"]
 [dependencies.time]
 version = "0.3.44"
 default-features = false
-features = []
+features = ["serde"]
