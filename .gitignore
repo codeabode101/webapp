@@ -27,6 +27,5 @@ target
 
 frontend/node_modules
 frontend/out
-frontend/package-lock.json
 node_modules
 *.dump
