@@ -68,8 +68,6 @@ function ClassCard({
 
   // Helper to render a view button for long text (classwork or homework)
   const renderViewButton = (text: string | undefined, type: 'classwork' | 'homework', label: string, submission?: string) => {
-    if (!text || text.trim() === '') return null;
-    const preview = text.substring(0, 80) + '...';
     // Map type to short code: 'cw' for classwork, 'hw' for homework
     const typeCode = type === 'classwork' ? 'cw' : 'hw';
     return (
@@ -79,9 +77,13 @@ function ClassCard({
           href={`/work?c=${classItem.class_id}&t=${typeCode}&s=${studentId}`}
           className="view-text-btn"
         >
-          View {label}
+          Open {label}
         </Link>
-        <span className="text-preview">{preview}</span>
+        {text && text.trim() !== '' && (
+          <span className="text-preview">
+              {text.substring(0, 80)}...
+          </span>
+        )}
       </div>
     );
   };

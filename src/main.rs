@@ -285,27 +285,27 @@ async fn get_student(
             // fetch the classes:
             let classes = sqlx::query_as!(
                 StudentClass,
-                "SELECT class_id, status, name, methods, stretch_methods,
-                description, classwork, notes, hw, hw_notes,
+                "SELECT sc.class_id, sc.status, sc.name, sc.methods, sc.stretch_methods,
+                sc.description, sc.classwork, sc.notes, sc.hw, sc.hw_notes,
                 (
                     SELECT work 
-                    FROM submissions 
-                    WHERE class_id = class_id 
-                    AND work_type = 'classwork'
-                    ORDER BY id DESC 
+                    FROM submissions s
+                    WHERE s.class_id = sc.class_id 
+                    AND s.work_type = 'classwork'
+                    ORDER BY s.id DESC 
                     LIMIT 1
                 ) as classwork_submission,
                 (
                     SELECT work  
-                    FROM submissions 
-                    WHERE class_id = class_id 
-                    AND work_type = 'homework'
-                    ORDER BY id DESC 
+                    FROM submissions s
+                    WHERE s.class_id = sc.class_id 
+                    AND s.work_type = 'homework'
+                    ORDER BY s.id DESC 
                     LIMIT 1
                 ) as homework_submission
-                FROM students_classes 
-                WHERE student_id = $1
-                ORDER BY class_id DESC",
+                FROM students_classes sc
+                WHERE sc.student_id = $1
+                ORDER BY sc.class_id DESC",
                 id
             )
             .fetch_all(&**state)

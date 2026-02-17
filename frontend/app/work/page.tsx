@@ -137,14 +137,16 @@ function ClassworkContent() {
   return (
     <>
       <div className="classwork-container">
-        <div className="classwork-content">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
-          >
-            {content}
-          </ReactMarkdown>
-        </div>
+        { content && content.trim() !== '' && (
+            <div className="classwork-content">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
+        )}
         <div className="upload-section">
           <div className="upload-header">
             <h3><strong>Upload Work</strong></h3>
