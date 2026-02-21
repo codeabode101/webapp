@@ -136,32 +136,37 @@ function ClassworkContent() {
 
   return (
     <>
-      <div className="classwork-container">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 p-4 lg:p-8 w-full min-h-screen">
         { content && content.trim() !== '' && (
-            <div className="classwork-content">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
-              >
-                {content}
-              </ReactMarkdown>
-            </div>
+          <div className="flex-1 overflow-y-auto p-4 bg-black/20 rounded-2xl whitespace-pre-wrap break-words max-lg:max-h-[50vh] max-h-screen h-full">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
+            >
+              {content}
+            </ReactMarkdown>
+          </div>
         )}
         <div className="upload-section">
           <div className="upload-header">
-            <h3><strong>Upload Work</strong></h3>
-            <div className="upload-actions">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 md:flex-nowrap max-sm:flex-col max-sm:w-full">
               {submission && (
                 <>
                   <Link
-                    href={`/ask?c=${classId}&t=${type}&s=${studentId}`} 
-                    className="ask-btn" 
+                    href={`/ask?c=${classId}&t=${type}&s=${studentId}`}
+                    className="px-3 py-1.5 rounded-lg font-semibold text-base border border-[#d63384] text-[#d63384] bg-transparent hover:bg-[#d63384] hover:text-white transition-colors max-sm:w-full text-center"
                   >
                     Ask
                   </Link>
+                  <Link
+                    href={`/publish?c=${classId}&t=${typeParam}&s=${studentId}`}
+                    className="px-3 py-1.5 rounded-lg font-semibold text-base border border-[#eab308] text-[#eab308] bg-transparent hover:bg-[#eab308] hover:text-white transition-colors max-sm:w-full text-center"
+                  >
+                    Publish
+                  </Link>
                   <button
                     type="button"
-                    className="my-work-btn"
+                    className="px-3 py-1.5 rounded-lg font-semibold text-base border border-[var(--accent-2)] text-[var(--accent-2)] bg-transparent hover:bg-[var(--accent-2)] hover:text-black transition-colors max-sm:w-full"
                     onClick={() => setSubmissionVisible(!submissionVisible)}
                   >
                     My Work
@@ -170,10 +175,10 @@ function ClassworkContent() {
               )}
               <button
                 type="button"
-                className="submit-btn"
+                className="px-3 py-1.5 rounded-lg font-semibold text-base border border-[var(--accent)] text-[var(--accent)] bg-transparent hover:bg-[var(--accent)] hover:text-white transition-colors max-sm:w-full"
                 onClick={handleSubmit}
               >
-                Submit
+                Upload
               </button>
             </div>
           </div>

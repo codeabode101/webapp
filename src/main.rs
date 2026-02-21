@@ -112,6 +112,129 @@ struct QuestionWithComments {
     comments: SqlxJson<Vec<Comment>>, // wraps the Vec so it can be decoded from JSON
 }
 
+#[derive(Debug, Deserialize)]
+struct ProjectRequest {
+    title: String, 
+    description: String,
+    class_id: i32,
+    work_type: String,
+    deploy_method: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ProjectInfo {
+    id: i32,
+    title: String,
+    description: String,
+    author_name: Option<String>,
+    views: i32,
+    status: String,
+    created_at: OffsetDateTime,
+    url: String,
+}
+
+async fn build_project(
+    pool: Arc<sqlx::PgPool>, 
+    project_id: i32
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let record = sqlx::query!(
+        "SELECT s.work, p.deploy_method FROM projects p JOIN submissions s ON s.id = p.submission_id WHERE p.id = $1",
+        project_id
+    )
+    .fetch_one(&*pool)
+    .await?;
+
+    let work = record.work;
+    let deploy_method = record.deploy_method;
+
+    if deploy_method.as_deref() != Some("pygbag") {
+        return Err("Invalid deploy method".into());
+    }
+
+    // Project directory
+    let project_dir = std::env::current_dir()?
+        .join("frontend")
+        .join("out")
+        .join("static")
+        .join("projects")
+        .join(project_id.to_string());
+
+    // Clean slate
+    if project_dir.exists() {
+        tokio::fs::remove_dir_all(&project_dir).await?;
+    }
+    tokio::fs::create_dir_all(&project_dir).await?;
+
+    // Write main.py
+    let main_py = project_dir.join("main.py");
+    tokio::fs::write(&main_py, work).await?;
+
+    // Run pygbag build with explicit CDN and environment
+    use tokio::time::timeout;
+    use std::time::Duration;
+
+    let build_result = timeout(Duration::from_secs(300), async {
+        let output = tokio::process::Command::new("pygbag")
+            .arg("--build")
+            .arg(project_dir.to_str().unwrap())
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute pygbag: {}", e))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            return Err(format!(
+                "pygbag failed (exit code: {:?})\nSTDOUT:\n{}\nSTDERR:\n{}",
+                output.status.code(),
+                stdout,
+                stderr
+            ));
+        }
+        Ok(())
+    }).await;
+
+    match build_result {
+        Ok(Ok(())) => {
+            // Ensure the build/web folder exists
+            let build_web = project_dir.join("build").join("web");
+            if !build_web.exists() {
+                return Err("Build completed but build/web folder not found".into());
+            }
+
+            sqlx::query!(
+                "UPDATE projects SET status = 'ready', build_log = NULL WHERE id = $1",
+                project_id
+            )
+            .execute(&*pool)
+            .await?;
+
+            Ok(())
+        }
+        Ok(Err(e)) => {
+            sqlx::query!(
+                "UPDATE projects SET status = 'failed', build_log = $1 WHERE id = $2",
+                e.to_string(),
+                project_id
+            )
+            .execute(&*pool)
+            .await?;
+            Err(e.into())
+        }
+        Err(_) => {
+            let msg = "Build timed out after 5 minutes".to_string();
+            sqlx::query!(
+                "UPDATE projects SET status = 'failed', build_log = $1 WHERE id = $2",
+                msg,
+                project_id
+            )
+            .execute(&*pool)
+            .await?;
+            Err(msg.into())
+        }
+    }
+}
+
 #[axum::debug_handler]
 async fn reset_password(
     state: axum::extract::State<Arc<sqlx::PgPool>>,
@@ -424,7 +547,6 @@ async fn submit_question(
     }
 } 
 
-
 #[axum::debug_handler]
 async fn submit_comment(
     state: axum::extract::State<Arc<sqlx::PgPool>>,
@@ -514,6 +636,141 @@ async fn get_questions(
     Ok(Json(questions))
 }
 
+#[axum::debug_handler]
+async fn submit_project(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    cookie_jar: CookieJar,
+    Json(body): Json<ProjectRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let maybe_id = sqlx::query_scalar!(
+        r#"
+        WITH token_user AS (
+            SELECT user_id
+            FROM tokens
+            WHERE token = $1 AND expires_at > now()
+        )
+        INSERT INTO projects (account_id, submission_id, title, description, deploy_method)
+        SELECT
+            token_user.user_id,
+            sub.id,
+            $4, $5, $6
+        FROM token_user
+        LEFT JOIN LATERAL (
+            SELECT s.id
+            FROM submissions s
+            JOIN students_classes sc ON sc.class_id = s.class_id
+            WHERE s.work_type = $3
+            ORDER BY s.id DESC
+            LIMIT 1
+        ) sub ON true
+        WHERE EXISTS (
+            SELECT 1
+            FROM students
+            WHERE id = (
+                SELECT student_id 
+                FROM students_classes 
+                WHERE class_id = $2
+            ) 
+            AND token_user.user_id = ANY(account_id)
+        )        
+        RETURNING id
+        "#,
+        cookie_jar.get("token").ok_or(
+            (StatusCode::NOT_FOUND, "Token not found".to_string()))?.value(),
+        body.class_id,
+        body.work_type,
+        body.title,
+        body.description,
+        body.deploy_method
+    )
+    .fetch_optional(&**state)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let project_id = match maybe_id {
+        Some(id) => id,
+        None => return Err((StatusCode::BAD_REQUEST, "No valid submission found".to_string())),
+    };
+
+    let state_clone = state.0.clone();
+    tokio::spawn(async move {
+        if let Err(e) = build_project(state_clone.clone(), project_id).await {
+            eprintln!("Build failed for project {}: {}", project_id, e);
+            let _ = sqlx::query!(
+                "UPDATE projects SET status = 'failed', build_log = $1 WHERE id = $2",
+                e.to_string(),
+                project_id
+            )
+            .execute(&*state_clone)
+            .await;
+        }
+    });
+
+    Ok(Json(
+        serde_json::json!({ "id": project_id, "status": "pending" })
+    ))
+} 
+
+#[axum::debug_handler]
+async fn list_projects(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+) -> Result<Json<Vec<ProjectInfo>>, (StatusCode, String)> {
+    let records = sqlx::query!(
+        r#"
+        SELECT 
+            p.id,
+            p.title,
+            p.description,
+            a.name as "author_name?",
+            p.views as "views!",
+            p.status as "status!",
+            (p.created_at AT TIME ZONE 'UTC') as "created_at!"
+        FROM projects p
+        LEFT JOIN accounts a ON a.id = p.account_id
+        WHERE p.status = 'ready'
+        ORDER BY p.created_at DESC
+        "#
+    )
+    .fetch_all(&**state)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let projects = records
+        .into_iter()
+        .map(|r| {
+            let url = format!("/static/projects/{}/build/web/index.html", r.id);
+            ProjectInfo {
+                id: r.id,
+                title: r.title,
+                description: r.description,
+                author_name: r.author_name,
+                views: r.views,
+                status: r.status,
+                created_at: r.created_at,
+                url,
+            }
+        })
+        .collect();
+
+    Ok(Json(projects))
+}
+
+#[axum::debug_handler]
+async fn increment_project_view(
+    state: axum::extract::State<Arc<sqlx::PgPool>>,
+    Path(id): Path<i32>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    sqlx::query!(
+        "UPDATE projects SET views = views + 1 WHERE id = $1",
+        id
+    )
+    .execute(&**state)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(StatusCode::OK)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -551,6 +808,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/ask", post(submit_question))
         .route("/api/comment", post(submit_comment))
         .route("/api/get_questions", get(get_questions))
+        .route("/api/submit_project", post(submit_project))
+        .route("/api/projects", get(list_projects))
+        .route("/api/projects/{id}/view", post(increment_project_view))
         .fallback_service(ServeDir::new("frontend/out"))
         .with_state(shared_state)
         ;

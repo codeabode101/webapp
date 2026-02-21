@@ -51,16 +51,21 @@ export default function StudentList() {
 
   return (
     <section className="students">
-      <div className="row">
-        <button onClick={loadStudents}>Load / Refresh Students</button>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <button
+          onClick={loadStudents}
+          className="border-0 rounded-lg py-3 px-4 bg-[var(--accent)] text-white font-bold tracking-wide transition-all duration-200 ease-out shadow-[0_6px_18px_rgba(106,165,255,0.35)] hover:shadow-[0_6px_22px_rgba(106,165,255,0.5)] active:translate-y-px"
+        >
+          Load / Refresh Students
+        </button>
         <input
           type="search"
           placeholder="Filter by name…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[#101939] text-[var(--text)]"
         />
       </div>
-
       <ul>
         {filtered.length === 0 ? (
           <li className="empty">No students found.</li>

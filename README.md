@@ -46,6 +46,14 @@ cargo build
 cargo build --bin codeabode
 ```
 
+frontend:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
 ### codeabode.py
 
 Go to `https://github.com/codeabode101/agents` and download the binary from releases or setup using the guide in `README.md`. 

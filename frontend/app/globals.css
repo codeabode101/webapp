@@ -101,28 +101,6 @@ input[type="text"], input[type="password"], input[type="number"], input[type="se
     color: var(--text);
 }
 
-button {
-    appearance: none;
-    border: none;
-    border-radius: 10px;
-    padding: .7rem .9rem;
-    cursor: pointer;
-    background: var(--accent);
-    color: #fff;
-    font-weight: 700;
-    letter-spacing: .2px;
-    transition: transform .02s ease, box-shadow .2s ease;
-    box-shadow: 0 6px 18px rgba(106,165,255,.35);
-}
-
-button:hover {
-    box-shadow: 0 6px 22px rgba(106,165,255,.5);
-}
-
-button:active {
-    transform: translateY(1px);
-}
-
 .btn-secondary {
     background: transparent;
     color: var(--accent);
@@ -569,35 +547,6 @@ footer {
     background: rgba(106, 165, 255, 0.1);
 }
 
-.classwork-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-    width: 100%;
-    height: 100%;
-}
-
-.classwork-content {
-    flex: 1;
-    overflow-y: auto;
-  /* Changed from auto to scroll to always show scrollbar */
-    padding: 1rem;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 16px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    max-height: 100vh;
-}
-
-.upload-section {
-    padding: 1rem;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-}
-
 /* Upload header wth My Work button */
 .upload-header {
     display: flex;
@@ -618,62 +567,6 @@ footer {
     display: flex;
     gap: 0.75rem;
     align-items: center;
-}
-
-.my-work-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-}
-
-.my-work-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--accent);
-}
-
-.my-work-btn.active {
-    background: rgba(106, 165, 255, 0.2);
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 4px 12px rgba(106, 165, 255, 0.2);
-}
-
-.ask-btn {
-    background: #d63384; /* vibrant pink with good contrast */
-    border: 1px solid #a61e6d; /* darker pink border */
-    color: #ffffff;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    display: inline-block;
-}
-
-.ask-btn:hover {
-    background: #c2257c; /* slightly darker */
-    border-color: #8b1a5b;
-    color: #ffffff;
-}
-
-.ask-btn:active {
-    transform: translateY(1px);
-    background: #a61e6d; /* even darker */
-}
-
-.ask-btn.active {
-    background: #d63384;
-    border-color: var(--accent);
-    box-shadow: 0 4px 12px rgba(214, 51, 132, 0.4);
-    color: #ffffff;
 }
 
 @keyframes slideDown {
@@ -724,12 +617,6 @@ footer {
         justify-content: space-between;
     }
 
-    .my-work-btn,
-  .submit-btn {
-        flex: 1;
-        padding: 0.75rem;
-    }
-
     .submission-code pre {
         font-size: 0.85rem;
     }
@@ -741,29 +628,9 @@ footer {
         gap: 0.5rem;
     }
 
-    .my-work-btn,
-  .submit-btn {
-        width: 100%;
-    }
-
     .submission-code pre {
         font-size: 0.8rem;
     }
-}
-
-.submit-btn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.submit-btn:hover {
-    background: #5a95ff;
 }
 
 .text-input-box {
@@ -831,12 +698,6 @@ footer {
 
 /* Mobile responsiveness for classwork page */
 @media (max-width: 768px) {
-    .classwork-container {
-        grid-template-columns: 1fr !important;
-        gap: 1rem;
-        padding: 1rem;
-    }
-
     .classwork-content {
         min-height: 50vh;
         max-height: 50vh;
