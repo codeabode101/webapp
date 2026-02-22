@@ -22,8 +22,7 @@ export default function LoginForm() {
 
   return (
     <section className="card">
-      <h2>Login</h2>
-      <p className="small">Use your CodeAbode account credentials.</p>
+      <h2><strong>Login</strong></h2>
       <form onSubmit={handleSubmit}>
         <label>Username</label>
         <input
@@ -39,7 +38,12 @@ export default function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit">Login</button>
+        <button
+          type="submit"
+          className="px-3 py-1.5 rounded-lg font-semibold text-base border border-[var(--accent-2)] text-[var(--accent-2)] bg-transparent hover:bg-[var(--accent-2)] hover:text-black transition-colors"
+        >
+          Login
+        </button>
       </form>
       <div className={`status ${status.includes('success') ? 'ok' : status.includes('fail') ? 'err' : ''}`}>
         {status || 'Not signed in.'}
