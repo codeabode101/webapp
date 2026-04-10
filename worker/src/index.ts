@@ -90,15 +90,29 @@ async function getUserFromRequest(request: Request, env: Env): Promise<{ userId:
   return { userId: result.user_id, token };
 }
 
-async function setAuthCookies(response: Response, token: string, name: string): Promise<Response> {
+function setAuthCookies(response: Response, token: string, name: string, origin: string | null): Response {
   const expires = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toUTCString();
+  const cookieHeaders = [
+    `token=${token}; Path=/; HttpOnly; SameSite=Strict; Expires=${expires}`,
+    `name=${encodeURIComponent(name)}; Path=/; SameSite=Strict; Expires=${expires}`
+  ];
   
-  response.headers.set('Set-Cookie', 
-    `token=${token}; Path=/; HttpOnly; SameSite=Strict; Expires=${expires}`);
-  response.headers.set('Set-Cookie', 
-    `name=${encodeURIComponent(name)}; Path=/; SameSite=Strict; Expires=${expires}`);
-  
-  return response;
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/plain',
+      'Set-Cookie': cookieHeaders.join(', '),
+    }
+  });
 }
 
 async function clearAuthCookies(response: Response): Promise<Response> {
@@ -139,10 +153,11 @@ async function login(request: Request, env: Env): Promise<Response> {
     INSERT INTO tokens (token, user_id, expires_at) VALUES (?, ?, ?)
   `).bind(token, user.id, expiresAt).run();
   
+  const origin = request.headers.get('Origin');
   const response = new Response(JSON.stringify('Login successful'), {
-    headers: { ...getCorsHeaders(request.headers.get('Origin')), 'Content-Type': 'text/plain' }
+    headers: { ...getCorsHeaders(origin), 'Content-Type': 'text/plain' }
   });
-  return setAuthCookies(response, token, user.name);
+  return setAuthCookies(response, token, user.name, origin);
 }
 
 async function resetPassword(request: Request, env: Env): Promise<Response> {
