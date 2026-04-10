@@ -1,6 +1,7 @@
 name = "webapp"
 main = "src/index.ts"
 compatibility_date = "2024-04-19"
+account_id = "0bfab51e8cc50b91033dc21005e8cabc"
 
 [[d1_databases]]
 binding = "DB"
