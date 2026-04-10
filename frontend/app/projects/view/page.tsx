@@ -35,7 +35,7 @@ function ProjectContent() {
     }
 
     // Fallback: fetch all projects (or a single project endpoint)
-    fetch('/api/projects', { credentials: 'same-origin' })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/projects`, { credentials: 'include' })
       .then(res => res.json())
       .then((allProjects) => {
         const found = allProjects.find((p: any) => p.id === idNum);
@@ -54,7 +54,7 @@ function ProjectContent() {
   // Increment view count if project is ready (optional)
   useEffect(() => {
     if (project && project.status === 'ready') {
-      fetch(`/api/projects/${id}/view`, { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/projects/${id}/view`, { method: 'POST', credentials: 'include' }).catch(() => {});
     }
   }, [project, id]);
 

@@ -17,10 +17,10 @@ export default function ChangePasswordModal({ isOpen, onClose }: { isOpen: boole
     setStatus('Updating password…');
 
     try {
-      const res = await fetch('/api/reset-password', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify({
           username,
           password: currentPassword,

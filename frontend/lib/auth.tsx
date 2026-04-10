@@ -1,6 +1,8 @@
 'use client';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getCookie } from './cookies'; // helper to read document.cookie
+import { getCookie } from './cookies';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface AuthContextType {
   user: string | null;
@@ -24,20 +26,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     checkAuth();
-    // Optional: listen to cookie changes (e.g., on focus)
     window.addEventListener('focus', checkAuth);
     return () => window.removeEventListener('focus', checkAuth);
   }, []);
 
   const login = async (username: string, password: string) => {
-    const res = await fetch('/api/login', {
+    const res = await fetch(`${API_BASE}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
+      credentials: 'include',
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) throw new Error(await res.text());
-    checkAuth(); // reload user from cookie
+    checkAuth();
   };
 
   const logout = () => {
@@ -57,6 +58,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error('useAuth must be within AuthProvider');
   return ctx;
 };

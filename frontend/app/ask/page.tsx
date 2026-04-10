@@ -37,10 +37,10 @@ function AskContent() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch('/api/ask', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify({
           class_id: Number(classId),
           work_type: workType,

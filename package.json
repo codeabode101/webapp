@@ -1,0 +1,16 @@
+{
+  "name": "webapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:worker": "cd worker && wrangler dev",
+    "deploy:worker": "cd worker && wrangler deploy",
+    "deploy:frontend": "cd frontend && npm run build",
+    "dev:frontend": "cd frontend && npm run dev",
+    "db:migrate": "cd worker && wrangler d1 execute webapp-db --file=./migrations/d1_schema.sql --local",
+    "db:migrate:remote": "cd worker && wrangler d1 execute webapp-db --file=./migrations/d1_schema.sql --remote"
+  },
+  "dependencies": {
+    "wrangler": "^4.81.1"
+  }
+}

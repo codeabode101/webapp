@@ -18,9 +18,9 @@ export default function StudentList() {
   const loadStudents = async () => {
     setStatus('Loading students…');
     try {
-      const res = await fetch('/api/list_students', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/list_students`, {
         method: 'POST',
-        credentials: 'same-origin',
+        credentials: 'include',
       });
       if (!res.ok) {
         if (res.status === 401) {

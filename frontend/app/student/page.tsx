@@ -28,9 +28,9 @@ function StudentContent() {
       setLoading(false);
       return;
     }
-    fetch(`/api/get_student/${id}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/get_student/${id}`, {
       method: 'POST',
-      credentials: 'same-origin',
+      credentials: 'include',
     })
       .then(async (res) => {
         if (res.status === 404) {

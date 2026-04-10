@@ -91,9 +91,9 @@ function ClassworkContent() {
       }
     } else {
       // Fetch student data (fallback, e.g., if user came directly to work page)
-      fetch(`/api/get_student/${studentIdNum}`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/get_student/${studentIdNum}`, {
         method: 'POST',
-        credentials: 'same-origin',
+        credentials: 'include',
       })
         .then(res => res.json())
         .then(data => {
@@ -114,10 +114,10 @@ function ClassworkContent() {
     if (file) {
       workText = await file.text();
     }
-    const res = await fetch(`/api/submit/${type}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/submit/${type}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
+      credentials: 'include',
       body: JSON.stringify({ class_id: Number(classId), work: workText }),
     });
     if (res.ok) {

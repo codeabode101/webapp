@@ -52,8 +52,8 @@ export default function ForumPage() {
   useEffect(() => {
     if (!user) return;
     setFetching(true);
-    fetch('/api/get_questions', {
-      credentials: 'same-origin',
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/get_questions`, {
+      credentials: 'include',
     })
       .then(async (res) => {
         if (!res.ok) {
@@ -78,10 +78,10 @@ export default function ForumPage() {
     setSubmittingComment((prev) => ({ ...prev, [questionId]: true }));
 
     try {
-      const res = await fetch('/api/comment', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify({
           question_id: questionId,
           comment: commentText,

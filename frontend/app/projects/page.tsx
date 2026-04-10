@@ -20,7 +20,7 @@ export default function ProjectsPage() {
   }, [setParentPath]);
 
   useEffect(() => {
-    fetch('/api/projects', { credentials: 'same-origin' })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/projects`, { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();

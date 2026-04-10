@@ -36,10 +36,10 @@ function PublishContent() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch('/api/submit_project', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/submit_project`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify({
           class_id: Number(classId),
           work_type: workType === 'cw' ? 'classwork' : 'homework',
