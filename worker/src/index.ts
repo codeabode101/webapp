@@ -241,18 +241,17 @@ async function getStudent(request: Request, env: Env, id: number): Promise<Respo
   const classes = await env.DB.prepare(`
     SELECT sc.class_id, sc.status, sc.name, sc.methods, sc.stretch_methods,
            sc.description, sc.classwork, sc.notes, sc.hw, sc.hw_notes,
-           cw.work as classwork_submission, hw.work as homework_submission
+           (
+             SELECT s2.work FROM submissions s2 
+             WHERE s2.class_id = sc.class_id AND s2.work_type = 'classwork'
+             ORDER BY id DESC LIMIT 1
+           ) as classwork_submission,
+           (
+             SELECT s2.work FROM submissions s2 
+             WHERE s2.class_id = sc.class_id AND s2.work_type = 'homework'
+             ORDER BY id DESC LIMIT 1
+           ) as homework_submission
     FROM students_classes sc
-    LEFT JOIN (
-      SELECT class_id, work FROM submissions 
-      WHERE work_type = 'classwork' 
-      ORDER BY id DESC LIMIT 1
-    ) cw ON cw.class_id = sc.class_id
-    LEFT JOIN (
-      SELECT class_id, work FROM submissions 
-      WHERE work_type = 'homework' 
-      ORDER BY id DESC LIMIT 1
-    ) hw ON hw.class_id = sc.class_id
     WHERE sc.student_id = ?
     ORDER BY sc.class_id DESC
   `).bind(id).all<StudentClass>();
