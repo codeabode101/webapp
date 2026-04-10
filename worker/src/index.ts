@@ -144,11 +144,14 @@ async function clearAuthCookies(response: Response): Promise<Response> {
   return response;
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+function getCorsHeaders(origin: string | null) {
+  return {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 async function login(request: Request, env: Env): Promise<Response> {
   const body = await request.json<{ username: string; password: string }>();
@@ -160,7 +163,7 @@ async function login(request: Request, env: Env): Promise<Response> {
   if (!user || !(await verifyPassword(body.password, user.password))) {
     return new Response(JSON.stringify('Incorrect password'), { 
       status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+      headers: { ...getCorsHeaders(request.headers.get('Origin')), 'Content-Type': 'text/plain' }
     });
   }
   
@@ -172,7 +175,7 @@ async function login(request: Request, env: Env): Promise<Response> {
   `).bind(token, user.id, expiresAt).run();
   
   const response = new Response(JSON.stringify('Login successful'), {
-    headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+    headers: { ...getCorsHeaders(request.headers.get('Origin')), 'Content-Type': 'text/plain' }
   });
   return setAuthCookies(response, token, user.name);
 }
@@ -205,7 +208,7 @@ async function resetPassword(request: Request, env: Env): Promise<Response> {
   `).bind(account.id).run();
   
   const response = new Response(JSON.stringify('Password reset successfully'), {
-    headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+    headers: { ...getCorsHeaders(request.headers.get('Origin')), 'Content-Type': 'text/plain' }
   });
   return clearAuthCookies(response);
 }
@@ -220,7 +223,7 @@ async function listStudents(request: Request, env: Env): Promise<Response> {
     SELECT id, name FROM students WHERE account_id = ?
   `).bind(user.userId).all<{ id: number; name: string }>();
   
-  return new Response(JSON.stringify(students.results), { headers: corsHeaders });
+  return new Response(JSON.stringify(students.results), { headers: getCorsHeaders(request.headers.get('Origin')) });
 }
 
 async function getStudent(request: Request, env: Env, id: number): Promise<Response> {
@@ -268,7 +271,7 @@ async function getStudent(request: Request, env: Env, id: number): Promise<Respo
     })),
   };
   
-  return new Response(JSON.stringify(result), { headers: corsHeaders });
+  return new Response(JSON.stringify(result), { headers: getCorsHeaders(request.headers.get('Origin')) });
 }
 
 async function submitWork(request: Request, env: Env, workType: string): Promise<Response> {
@@ -295,7 +298,7 @@ async function submitWork(request: Request, env: Env, workType: string): Promise
   
   return new Response(JSON.stringify('OK'), { 
     status: 200,
-    headers: corsHeaders 
+    headers: getCorsHeaders(request.headers.get('Origin'))
   });
 }
 
@@ -335,7 +338,7 @@ async function submitQuestion(request: Request, env: Env): Promise<Response> {
   
   return new Response(JSON.stringify(question?.created_at || ''), {
     status: 200,
-    headers: corsHeaders
+    headers: getCorsHeaders(request.headers.get('Origin'))
   });
 }
 
@@ -358,7 +361,7 @@ async function submitComment(request: Request, env: Env): Promise<Response> {
   
   return new Response(JSON.stringify(comment?.created_at || ''), {
     status: 200,
-    headers: corsHeaders
+    headers: getCorsHeaders(request.headers.get('Origin'))
   });
 }
 
@@ -409,7 +412,7 @@ async function getQuestions(request: Request, env: Env): Promise<Response> {
     })
   );
   
-  return new Response(JSON.stringify(questionsWithComments), { headers: corsHeaders });
+  return new Response(JSON.stringify(questionsWithComments), { headers: getCorsHeaders(request.headers.get('Origin')) });
 }
 
 async function submitProject(request: Request, env: Env): Promise<Response> {
@@ -463,7 +466,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
   }).catch(console.error);
   
   return new Response(JSON.stringify({ id: project?.id, status: 'pending' }), {
-    headers: corsHeaders
+    headers: getCorsHeaders(request.headers.get('Origin'))
   });
 }
 
@@ -496,7 +499,7 @@ async function listProjects(env: Env): Promise<Response> {
     url: `/static/projects/${p.id}/build/web/index.html`,
   }));
   
-  return new Response(JSON.stringify(result), { headers: corsHeaders });
+  return new Response(JSON.stringify(result), { headers: getCorsHeaders(request.headers.get('Origin')) });
 }
 
 async function incrementProjectView(env: Env, id: number): Promise<Response> {
@@ -504,7 +507,7 @@ async function incrementProjectView(env: Env, id: number): Promise<Response> {
     UPDATE projects SET views = views + 1 WHERE id = ?
   `).bind(id).run();
   
-  return new Response(JSON.stringify('OK'), { headers: corsHeaders });
+  return new Response(JSON.stringify('OK'), { headers: getCorsHeaders(request.headers.get('Origin')) });
 }
 
 export default {
@@ -513,7 +516,7 @@ export default {
     const path = url.pathname;
     
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: getCorsHeaders(request.headers.get('Origin')) });
     }
     
     try {
@@ -569,7 +572,7 @@ export default {
       console.error(error);
       return new Response(JSON.stringify({ error: String(error) }), { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...getCorsHeaders(request.headers.get('Origin')), 'Content-Type': 'application/json' }
       });
     }
   },
