@@ -102,8 +102,8 @@ function setAuthCookies(response: Response, token: string, name: string, origin:
 
   const headers = new Headers(corsHeaders);
   headers.set('Content-Type', 'text/plain');
-  headers.append('Set-Cookie', `token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Expires=${expires}`);
-  headers.append('Set-Cookie', `name=${encodeURIComponent(name)}; Path=/; SameSite=None; Secure; Expires=${expires}`);
+  headers.append('Set-Cookie', `token=${token}; Path=/; Domain=codeabode.co; HttpOnly; Secure; Expires=${expires}`);
+  headers.append('Set-Cookie', `name=${encodeURIComponent(name)}; Path=/; Domain=codeabode.co; Secure; Expires=${expires}`);
 
   return new Response(response.body, {
     status: response.status,
