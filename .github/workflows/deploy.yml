@@ -1,107 +1,37 @@
-name: Rust + Next.js Build and Deploy
+name: Deploy
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-env:
-  CARGO_TERM_COLOR: always
-  DATABASE_URL: ${{ secrets.DB_URL }}
+    branches: [main]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # Cache Rust dependencies
-    - name: Cargo Cache
-      uses: actions/cache@v4.2.4
-      with:
-        path: ~/.cargo
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-          ${{ runner.os }}-cargo
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-    - name: Cargo Target Cache
-      uses: actions/cache@v4.2.4
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.toml') }}
-          ${{ runner.os }}-cargo-target
+      - name: Install deps
+        run: npm install
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-    # Setup Node.js for Next.js
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+      - name: Deploy Worker
+        run: cd worker && npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-    # Install frontend dependencies
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
-
-    # Build Next.js static export
-    - name: Build Next.js
-      working-directory: frontend
-      run: npm run build
-      # This should output to frontend/out (as configured in next.config.js)
-
-    # Build Rust backend with database migrations
-    - name: Build Rust backend
-      run: |
-        cargo install sqlx-cli --no-default-features --features native-tls,postgres
-        sqlx database create
-        sqlx migrate run
-        cargo build --release
-        mv target/release/webapp .
-
-    # Prepare deployment artifacts
-    - name: Prepare deployment folder
-      run: |
-        mkdir -p deploy/frontend/out
-        cp webapp deploy/
-        cp -r frontend/out/* deploy/frontend/out/
-
-    # Ensure remote directories exist
-    - name: Create remote directories
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        timeout: 5m
-        script: |
-          mkdir -p $HOME/codeabode/frontend/out
-
-    # Copy backend binary and frontend static files
-    - name: Copy files via SCP
-      uses: appleboy/scp-action@v1
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        source: "deploy/*"
-        target: codeabode/
-        strip_components: 1  # removes the 'deploy/' prefix
-
-    # Restart the service
-    - name: Restart service
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        timeout: 5m
-        script: |
-          sudo systemctl restart codeabode
+      - name: Build & Deploy Frontend
+        run: |
+          cd frontend
+          npm install
+          NEXT_PUBLIC_API_URL=https://webapp.rahejaom.workers.dev npm run build
+          cd ..
+          npx wrangler pages deploy frontend/out --project-name=webapp
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
