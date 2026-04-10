@@ -32,6 +32,7 @@ jobs:
           npm install
           NEXT_PUBLIC_API_URL=https://webapp.rahejaom.workers.dev npm run build
           cd ..
-          npx wrangler pages deploy frontend/out --project-name=webapp --account-id=0bfab51e8cc50b91033dc21005e8cabc
+          npx wrangler pages deploy frontend/out --project-name=webapp
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 0bfab51e8cc50b91033dc21005e8cabc
