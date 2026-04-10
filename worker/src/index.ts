@@ -216,15 +216,16 @@ async function getStudent(request: Request, env: Env, id: number): Promise<Respo
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
   
+  const uid = String(user.userId);
   const student = await env.DB.prepare(`
     SELECT id, name, age, current_level, final_goal, future_concepts, notes, current_class
     FROM students 
     WHERE id = ? AND (
-      account_id LIKE '%' || ? || ',%' 
-      OR account_id LIKE '%,' || ? || '}'
-      OR account_id = '{' || ? || '}'
+      account_id LIKE '%' || $1 || ',%' 
+      OR account_id LIKE '%,' || $1 || '}'
+      OR account_id = '{' || $1 || '}'
     )
-  `).bind(id, user.userId, user.userId, user.userId).first<Student>();
+  `).bind(id, uid).first<Student>();
   
   if (!student) {
     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 });
@@ -270,6 +271,7 @@ async function submitWork(request: Request, env: Env, workType: string): Promise
   
   const body = await request.json<{ class_id: number; work: string }>();
   
+  const uid = String(user.userId);
   const result = await env.DB.prepare(`
     INSERT INTO submissions (work, work_type, account_id, class_id)
     SELECT ?, ?, ?, ?
@@ -277,12 +279,12 @@ async function submitWork(request: Request, env: Env, workType: string): Promise
       SELECT 1 FROM students_classes sc
       JOIN students s ON s.id = sc.student_id
       WHERE sc.class_id = ? AND (
-        s.account_id LIKE '%' || ? || ',%' 
-        OR s.account_id LIKE '%,' || ? || '}'
-        OR s.account_id = '{' || ? || '}'
+        s.account_id LIKE '%' || $1 || ',%' 
+        OR s.account_id LIKE '%,' || $1 || '}'
+        OR s.account_id = '{' || $1 || '}'
       )
     )
-  `).bind(body.work, workType, user.userId, user.userId, user.userId, body.class_id, user.userId).run();
+  `).bind(body.work, workType, user.userId, body.class_id, uid).run();
   
   if (result.meta.changes === 0) {
     return new Response(JSON.stringify('Something went wrong'), { status: 401 });
@@ -432,6 +434,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
   
   const submissionId = submission?.id || null;
   
+  const uid = String(user.userId);
   const result = await env.DB.prepare(`
     INSERT INTO projects (account_id, submission_id, title, description, deploy_method, status)
     SELECT ?, ?, ?, ?, ?, 'pending'
@@ -439,12 +442,12 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
       SELECT 1 FROM students s
       JOIN students_classes sc ON sc.class_id = ?
       WHERE s.id = sc.student_id AND (
-        s.account_id LIKE '%' || ? || ',%' 
-        OR s.account_id LIKE '%,' || ? || '}'
-        OR s.account_id = '{' || ? || '}'
+        s.account_id LIKE '%' || $1 || ',%' 
+        OR s.account_id LIKE '%,' || $1 || '}'
+        OR s.account_id = '{' || $1 || '}'
       )
     )
-  `).bind(user.userId, submissionId, body.title, body.description, body.deploy_method, body.class_id, user.userId, user.userId, user.userId, body.class_id).run();
+  `).bind(user.userId, submissionId, body.title, body.description, body.deploy_method, body.class_id, uid).run();
   
   if (result.meta.changes === 0) {
     return new Response(JSON.stringify({ error: 'No valid submission found' }), { status: 400 });
