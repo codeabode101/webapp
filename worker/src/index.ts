@@ -565,17 +565,6 @@ export default {
       }
       
       const origin = request.headers.get('Origin');
-
-      if (path === '/api/admin/restore' && request.method === 'POST') {
-        const body = await request.json<{ submissions: Array<{id: number; class_id: number; work: string; time: string; work_type: string }> }>();
-        for (const sub of body.submissions) {
-          await env.DB.prepare(`
-            INSERT OR REPLACE INTO submissions (id, account_id, class_id, work, time, work_type)
-            VALUES ($1, $2, $3, $4, $5, $6)
-          `).bind(sub.id, null, sub.class_id, sub.work, sub.time, sub.work_type).run();
-        }
-        return new Response(JSON.stringify({ inserted: body.submissions.length }), { headers: getCorsHeaders(origin) });
-      }
       
       if (path === '/api/projects' && request.method === 'GET') {
         return await listProjects(env, origin);
