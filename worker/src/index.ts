@@ -476,7 +476,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
   });
 }
 
-async function listProjects(env: Env): Promise<Response> {
+async function listProjects(env: Env, origin: string | null): Promise<Response> {
   const projects = await env.DB.prepare(`
     SELECT 
       p.id,
@@ -505,15 +505,15 @@ async function listProjects(env: Env): Promise<Response> {
     url: `/static/projects/${p.id}/build/web/index.html`,
   }));
   
-  return new Response(JSON.stringify(result), { headers: getCorsHeaders(request.headers.get('Origin')) });
+  return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
 }
 
-async function incrementProjectView(env: Env, id: number): Promise<Response> {
+async function incrementProjectView(env: Env, id: number, origin: string | null): Promise<Response> {
   await env.DB.prepare(`
     UPDATE projects SET views = views + 1 WHERE id = ?
   `).bind(id).run();
   
-  return new Response(JSON.stringify('OK'), { headers: getCorsHeaders(request.headers.get('Origin')) });
+  return new Response(JSON.stringify('OK'), { headers: getCorsHeaders(origin) });
 }
 
 export default {
@@ -564,13 +564,15 @@ export default {
         return await submitProject(request, env);
       }
       
+      const origin = request.headers.get('Origin');
+      
       if (path === '/api/projects' && request.method === 'GET') {
-        return await listProjects(env);
+        return await listProjects(env, origin);
       }
       
       if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {
         const id = parseInt(path.split('/')[3]);
-        return await incrementProjectView(env, id);
+        return await incrementProjectView(env, id, origin);
       }
       
       return new Response('Not found', { status: 404 });

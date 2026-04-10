@@ -74,6 +74,8 @@ function ClassworkContent() {
     return () => setParentPath(null);
   }, [studentId, setParentPath]);
 
+  const [classStatus, setClassStatus] = useState('');
+
   useEffect(() => {
     if (!classId || !studentId || !user) return;
 
@@ -81,16 +83,17 @@ function ClassworkContent() {
     const cachedStudent = getStudent(studentIdNum);
 
     if (cachedStudent) {
-      // Use cached data
       const classItem = cachedStudent.classes.find((c: any) => c.class_id === Number(classId));
       if (classItem) {
-        setContent(type === 'classwork' ? classItem.classwork : classItem.hw);
-        setSubmission(type === 'classwork' ? classItem.classwork_submission : classItem.homework_submission);
+        const rawContent = type === 'classwork' ? classItem.classwork : classItem.hw;
+        const rawSubmission = type === 'classwork' ? classItem.classwork_submission : classItem.homework_submission;
+        setContent(rawContent ? rawContent.replace(/\\n/g, '\n') : '');
+        setSubmission(rawSubmission ? rawSubmission.replace(/\\n/g, '\n') : '');
+        setClassStatus(classItem.status || '');
       } else {
         setContent('Class not found');
       }
     } else {
-      // Fetch student data (fallback, e.g., if user came directly to work page)
       fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/get_student/${studentIdNum}`, {
         method: 'POST',
         credentials: 'include',
@@ -99,8 +102,11 @@ function ClassworkContent() {
         .then(data => {
           const classItem = data.classes.find((c: any) => c.class_id === Number(classId));
           if (classItem) {
-            setContent(type === 'classwork' ? classItem.classwork : classItem.hw);
-            setSubmission(type === 'classwork' ? classItem.classwork_submission : classItem.homework_submission);
+            const rawContent = type === 'classwork' ? classItem.classwork : classItem.hw;
+            const rawSubmission = type === 'classwork' ? classItem.classwork_submission : classItem.homework_submission;
+            setContent(rawContent ? rawContent.replace(/\\n/g, '\n') : '');
+            setSubmission(rawSubmission ? rawSubmission.replace(/\\n/g, '\n') : '');
+            setClassStatus(classItem.status || '');
           } else {
             setContent('Class not found');
           }
@@ -136,9 +142,9 @@ function ClassworkContent() {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 p-4 lg:p-8 w-full min-h-screen">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 p-4 lg:p-8 w-full min-h-screen" style={{ maxWidth: '100%', width: '100%' }}>
         { content && content.trim() !== '' && (
-          <div className="flex-1 overflow-y-auto p-4 bg-black/20 rounded-2xl whitespace-pre-wrap break-words max-lg:max-h-[50vh] max-h-screen h-full">
+          <div className="flex-1 min-w-0 overflow-y-auto p-4 bg-black/20 rounded-2xl whitespace-pre-wrap break-words max-lg:max-h-[50vh] max-h-screen h-full" style={{ minWidth: 0 }}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
@@ -150,7 +156,7 @@ function ClassworkContent() {
         <div className="upload-section">
           <div className="upload-header">
             <div className="flex flex-wrap items-center gap-2 md:gap-3 md:flex-nowrap max-sm:flex-col max-sm:w-full">
-              {submission && (
+              {(submission || classStatus === 'completed') && (
                 <>
                   <Link
                     href={`/ask?c=${classId}&t=${type}&s=${studentId}`}
