@@ -281,19 +281,19 @@ async function submitWork(request: Request, env: Env, workType: string): Promise
   const uid = String(user.userId);
   const result = await env.DB.prepare(`
     INSERT INTO submissions (work, work_type, account_id, class_id)
-    SELECT ?, ?, ?, ?
+    SELECT $1, $2, $3, $4
     WHERE EXISTS (
       SELECT 1 FROM students_classes sc
       JOIN students s ON s.id = sc.student_id
-      WHERE sc.class_id = ? AND (
-        s.account_id LIKE '%' || $1 || ',%' 
-        OR s.account_id LIKE '%,' || $1 || '}'
-        OR s.account_id = '{' || $1 || '}'
+      WHERE sc.class_id = $5 AND (
+        s.account_id LIKE '%' || $6 || ',%' 
+        OR s.account_id LIKE '%,' || $6 || '}'
+        OR s.account_id = '{' || $6 || '}'
       )
     )
-  `).bind(body.work, workType, user.userId, body.class_id, uid).run();
+  `).bind(body.work, workType, user.userId, body.class_id, body.class_id, uid).run();
   
-  if (result.meta.changes === 0) {
+  if (!result.meta.changes) {
     return new Response(JSON.stringify('Something went wrong'), { status: 401 });
   }
   
