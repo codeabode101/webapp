@@ -199,12 +199,13 @@ async function listStudents(request: Request, env: Env): Promise<Response> {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
   
+  const uid = String(user.userId);
   const students = await env.DB.prepare(`
     SELECT id, name FROM students 
-    WHERE account_id LIKE '%' || ? || ',%' 
-       OR account_id LIKE '%,' || ? || '}'
-       OR account_id = '{' || ? || '}'
-  `).bind(user.userId, user.userId, user.userId).all<{ id: number; name: string }>();
+    WHERE account_id LIKE '%' || $1 || ',%' 
+       OR account_id LIKE '%,' || $1 || '}'
+       OR account_id = '{' || $1 || '}'
+  `).bind(uid).all<{ id: number; name: string }>();
   
   return new Response(JSON.stringify(students.results), { headers: getCorsHeaders(request.headers.get('Origin')) });
 }
