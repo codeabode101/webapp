@@ -500,9 +500,10 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
     created_at: string;
   }>();
   
+  const buildServer = env.BUILD_SERVER_URL || 'http://iloveuvania.omraheja.me';
   const result = projects.results.map(p => ({
     ...p,
-    url: `/static/projects/${p.id}/build/web/index.html`,
+    url: `${buildServer}/static/projects/${p.id}/build/web/index.html`,
   }));
   
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });

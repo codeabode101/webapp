@@ -13,4 +13,4 @@ database_name = "codeabode"
 database_id = "73d68d74-4174-4ad5-8462-c440fb5348f3"
 
 [vars]
-BUILD_SERVER_URL = "http://ubuntu@iloveuvania.omraheja.me"
+BUILD_SERVER_URL = "http://iloveuvania.omraheja.me"
