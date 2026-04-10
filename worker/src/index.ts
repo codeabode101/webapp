@@ -53,54 +53,19 @@ function parseJsonArray(value: string | null): string[] {
 
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
-  const saltRounds = 10;
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const saltB64 = btoa(String.fromCharCode(...salt));
-  
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  );
-  
-  const derivedBits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: saltRounds * 1000 },
-    keyMaterial,
-    256
-  );
-  
-  const hash = btoa(String.fromCharCode(...new Uint8Array(derivedBits)));
-  return `$2b$${saltRounds}$${saltB64}$${hash}`;
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+  const hashArray = new Uint8Array(hashBuffer);
+  return '\\x' + Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  const parts = storedHash.split('$');
-  if (parts.length !== 4) return false;
-  
-  const [, , saltRounds, rest] = parts;
-  const [saltB64, hashB64] = rest.split('$');
-  const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
-  const storedHashValue = atob(hashB64);
-  
   const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  );
-  
-  const derivedBits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: parseInt(saltRounds) * 1000 },
-    keyMaterial,
-    256
-  );
-  
-  const derivedHash = String.fromCharCode(...new Uint8Array(derivedBits));
-  return derivedHash === storedHashValue;
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+  const hashArray = new Uint8Array(hashBuffer);
+  const computedHash = '\\x' + Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+  return computedHash === storedHash;
 }
 
 async function getUserFromRequest(request: Request, env: Env): Promise<{ userId: number; token: string } | null> {
