@@ -577,16 +577,6 @@ export default {
         return new Response(JSON.stringify({ inserted: body.submissions.length }), { headers: getCorsHeaders(origin) });
       }
       
-      if (path === '/api/admin/restore_hw' && request.method === 'POST') {
-        const body = await request.json<{ classes: Array<{class_id: number; student_id: number; hw: string}> }>();
-        for (const cls of body.classes) {
-          await env.DB.prepare(`
-            UPDATE students_classes SET hw = $1 WHERE class_id = $2 AND student_id = $3
-          `).bind(cls.hw, cls.class_id, cls.student_id).run();
-        }
-        return new Response(JSON.stringify({ updated: body.classes.length }), { headers: getCorsHeaders(origin) });
-      }
-      
       if (path === '/api/projects' && request.method === 'GET') {
         return await listProjects(env, origin);
       }
