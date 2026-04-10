@@ -93,8 +93,8 @@ async function getUserFromRequest(request: Request, env: Env): Promise<{ userId:
 function setAuthCookies(response: Response, token: string, name: string, origin: string | null): Response {
   const expires = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toUTCString();
   const cookieHeaders = [
-    `token=${token}; Path=/; HttpOnly; SameSite=Strict; Expires=${expires}`,
-    `name=${encodeURIComponent(name)}; Path=/; SameSite=Strict; Expires=${expires}`
+    `token=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`,
+    `name=${encodeURIComponent(name)}; Path=/; SameSite=Lax; Expires=${expires}`
   ];
   
   const corsHeaders = {
@@ -115,12 +115,24 @@ function setAuthCookies(response: Response, token: string, name: string, origin:
   });
 }
 
-async function clearAuthCookies(response: Response): Promise<Response> {
-  response.headers.set('Set-Cookie', 
-    'token=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
-  response.headers.set('Set-Cookie', 
-    'name=; Path=/; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
-  return response;
+async function clearAuthCookies(response: Response, origin: string | null): Promise<Response> {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+  return new Response(response.body, {
+    status: response.status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/plain',
+      'Set-Cookie': [
+        'token=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+        'name=; Path=/; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      ].join(', ')
+    }
+  });
 }
 
 function getCorsHeaders(origin: string | null) {
@@ -162,9 +174,10 @@ async function login(request: Request, env: Env): Promise<Response> {
 
 async function resetPassword(request: Request, env: Env): Promise<Response> {
   const user = await getUserFromRequest(request, env);
+  const origin = request.headers.get('Origin');
   if (!user) {
     const response = new Response(JSON.stringify('Unauthorized'), { status: 401 });
-    return clearAuthCookies(response);
+    return clearAuthCookies(response, origin);
   }
   
   const body = await request.json<{ username: string; password: string; new_password: string }>();
@@ -175,7 +188,7 @@ async function resetPassword(request: Request, env: Env): Promise<Response> {
   
   if (!account || !(await verifyPassword(body.password, account.password))) {
     const response = new Response(JSON.stringify('Incorrect password'), { status: 401 });
-    return clearAuthCookies(response);
+    return clearAuthCookies(response, origin);
   }
   
   const newHash = await hashPassword(body.new_password);
@@ -190,7 +203,7 @@ async function resetPassword(request: Request, env: Env): Promise<Response> {
   const response = new Response(JSON.stringify('Password reset successfully'), {
     headers: { ...getCorsHeaders(request.headers.get('Origin')), 'Content-Type': 'text/plain' }
   });
-  return clearAuthCookies(response);
+  return clearAuthCookies(response, origin);
 }
 
 async function listStudents(request: Request, env: Env): Promise<Response> {
