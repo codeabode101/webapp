@@ -49,7 +49,7 @@ async function test() {
   // Step 1: Login
   console.log('1. POST /api/login');
   const loginRes = await request({
-    hostname: 'webapp.rahejaom.workers.dev',
+    hostname: 'api.codeabode.co',
     path: '/api/login',
     method: 'POST',
     headers: {
@@ -66,7 +66,7 @@ async function test() {
   // Step 2: List students
   console.log('\n2. POST /api/list_students');
   const listRes = await request({
-    hostname: 'webapp.rahejaom.workers.dev',
+    hostname: 'api.codeabode.co',
     path: '/api/list_students',
     method: 'POST',
     headers: {
