@@ -38,7 +38,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) throw new Error(await res.text());
-    checkAuth();
+    await new Promise(r => setTimeout(r, 500));
+    const name = getCookie('name');
+    setUser(name ? decodeURIComponent(name) : null);
+    setIsLoading(false);
   };
 
   const logout = () => {

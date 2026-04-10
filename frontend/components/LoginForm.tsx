@@ -15,6 +15,7 @@ export default function LoginForm() {
     try {
       await login(username, password);
       setStatus('Login successful');
+      window.location.reload();
     } catch (err: any) {
       setStatus(err.message || 'Login failed');
     }

@@ -4,7 +4,7 @@ compatibility_date = "2024-04-19"
 account_id = "0bfab51e8cc50b91033dc21005e8cabc"
 
 routes = [
-  { pattern = "api.codeabode.co", zone_id = "760df109d01826ca94a0a463e0d43b5a" }
+  { pattern = "api.codeabode.co", custom_domain = true }
 ]
 
 [[d1_databases]]
