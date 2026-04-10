@@ -30,7 +30,7 @@ jobs:
         run: |
           cd frontend
           npm install
-          NEXT_PUBLIC_API_URL=https://webapp.rahejaom.workers.dev npm run build
+          NEXT_PUBLIC_API_URL=https://api.codeabode.co npm run build
           cd ..
           npx wrangler pages deploy frontend/out --project-name=webapp
         env:

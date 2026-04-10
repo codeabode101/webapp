@@ -102,8 +102,8 @@ function setAuthCookies(response: Response, token: string, name: string, origin:
 
   const headers = new Headers(corsHeaders);
   headers.set('Content-Type', 'text/plain');
-  headers.append('Set-Cookie', `token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Expires=${expires}`);
-  headers.append('Set-Cookie', `name=${encodeURIComponent(name)}; Path=/; SameSite=None; Secure; Expires=${expires}`);
+  headers.append('Set-Cookie', `token=${token}; Path=/; HttpOnly; SameSite=Lax; Secure; Expires=${expires}`);
+  headers.append('Set-Cookie', `name=${encodeURIComponent(name)}; Path=/; SameSite=Lax; Secure; Expires=${expires}`);
 
   return new Response(response.body, {
     status: response.status,
@@ -121,8 +121,8 @@ async function clearAuthCookies(response: Response, origin: string | null): Prom
   };
   const headers = new Headers(corsHeaders);
   headers.set('Content-Type', 'text/plain');
-  headers.append('Set-Cookie', 'token=; Path=/; HttpOnly; SameSite=None; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
-  headers.append('Set-Cookie', 'name=; Path=/; SameSite=None; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+  headers.append('Set-Cookie', 'token=; Path=/; HttpOnly; SameSite=Lax; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+  headers.append('Set-Cookie', 'name=; Path=/; SameSite=Lax; Secure; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
   return new Response(response.body, {
     status: response.status,
     headers,
