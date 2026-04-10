@@ -92,10 +92,6 @@ async function getUserFromRequest(request: Request, env: Env): Promise<{ userId:
 
 function setAuthCookies(response: Response, token: string, name: string, origin: string | null): Response {
   const expires = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toUTCString();
-  const cookieHeaders = [
-    `token=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`,
-    `name=${encodeURIComponent(name)}; Path=/; SameSite=Lax; Expires=${expires}`
-  ];
   
   const corsHeaders = {
     'Access-Control-Allow-Origin': origin || '*',
@@ -104,14 +100,15 @@ function setAuthCookies(response: Response, token: string, name: string, origin:
     'Access-Control-Allow-Credentials': 'true',
   };
 
+  const headers = new Headers(corsHeaders);
+  headers.set('Content-Type', 'text/plain');
+  headers.append('Set-Cookie', `token=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`);
+  headers.append('Set-Cookie', `name=${encodeURIComponent(name)}; Path=/; SameSite=Lax; Expires=${expires}`);
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'text/plain',
-      'Set-Cookie': cookieHeaders.join(', '),
-    }
+    headers,
   });
 }
 
@@ -122,16 +119,13 @@ async function clearAuthCookies(response: Response, origin: string | null): Prom
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
   };
+  const headers = new Headers(corsHeaders);
+  headers.set('Content-Type', 'text/plain');
+  headers.append('Set-Cookie', 'token=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+  headers.append('Set-Cookie', 'name=; Path=/; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
   return new Response(response.body, {
     status: response.status,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'text/plain',
-      'Set-Cookie': [
-        'token=; Path=/; HttpOnly; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-        'name=; Path=/; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      ].join(', ')
-    }
+    headers,
   });
 }
 
