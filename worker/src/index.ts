@@ -484,6 +484,7 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
       a.name as author_name,
       p.views,
       p.status,
+      p.submission_id,
       p.created_at
     FROM projects p
     LEFT JOIN accounts a ON a.id = p.account_id
@@ -496,13 +497,24 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
     author_name: string | null;
     views: number;
     status: string;
+    submission_id: number | null;
     created_at: string;
   }>();
   
   const buildServer = env.BUILD_SERVER_URL || 'http://iloveuvania.omraheja.me';
+  
+  // Map: project ID -> hash folder
+  // Based on server: 1->21e45ace6825a646, 2->23a52cae35194413, etc
+  const idToHash: Record<number, string> = {
+    1: '21e45ace6825a646',
+    2: '23a52cae35194413', 
+    3: '48421c24bc92cf11',
+    4: 'cfc400746593e18f',
+  };
+  
   const result = projects.results.map(p => ({
     ...p,
-    url: `${buildServer}/static/projects/${p.id}/build/web/index.html`,
+    url: idToHash[p.id] ? `${buildServer}/static/projects/${idToHash[p.id]}/index.html` : null,
   }));
   
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
