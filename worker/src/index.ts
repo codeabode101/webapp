@@ -526,6 +526,29 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
 }
 
+if (path === '/api/projects/pending' && request.method === 'GET') {
+  const projects = await env.DB.prepare(`
+    SELECT p.id, p.title, p.submission_id, p.created_at
+    FROM projects p
+    WHERE p.status = 'pending' 
+    ORDER BY p.created_at ASC
+    LIMIT 5
+  `).all<{
+    id: number;
+    title: string;
+    submission_id: number | null;
+    created_at: string;
+  }>();
+  
+  if (projects.results.length > 0) {
+    for (const p of projects.results) {
+      await env.DB.prepare(`UPDATE projects SET status = 'building' WHERE id = ?`).bind(p.id).run();
+    }
+  }
+  
+  return new Response(JSON.stringify(projects.results), { headers: getCorsHeaders(origin) });
+}
+
 async function incrementProjectView(env: Env, id: number, origin: string | null): Promise<Response> {
   await env.DB.prepare(`
     UPDATE projects SET views = views + 1 WHERE id = ?
