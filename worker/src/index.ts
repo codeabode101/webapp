@@ -463,11 +463,17 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
     SELECT id FROM projects ORDER BY rowid DESC LIMIT 1
   `).first<{ id: number }>();
   
-  const buildServerUrl = env.BUILD_SERVER_URL || 'http://ubuntu@iloveuvania.omraheja.me';
-  fetch(`${buildServerUrl}/build`, {
+  const buildUrl = env.BUILD_SERVER_URL?.replace('http://', '').replace('https://', '');
+  const buildParts = buildUrl?.split(':');
+  const buildHost = buildParts?.[0] || 'iloveuvania.omraheja.me';
+  
+  fetch(`${buildUrl?.startsWith('http') ? buildUrl : 'http://' + buildHost}/build`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ project_id: project?.id }),
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Build-Key': 'codeabode-build-secret-2026'
+    },
+    body: JSON.stringify({ project_id: project?.id, code: 'from submission' }),
   }).catch(console.error);
   
   return new Response(JSON.stringify({ id: project?.id, status: 'pending' }), {
