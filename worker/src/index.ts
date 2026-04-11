@@ -526,7 +526,7 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
 }
 
-if (path === '/api/projects/pending' && request.method === 'GET') {
+async function getPendingProjects(env: Env, origin: string | null): Promise<Response> {
   const projects = await env.DB.prepare(`
     SELECT p.id, p.title, p.submission_id, p.created_at
     FROM projects p
@@ -609,6 +609,10 @@ export default {
       
       if (path === '/api/projects' && request.method === 'GET') {
         return await listProjects(env, origin);
+      }
+      
+      if (path === '/api/projects/pending' && request.method === 'GET') {
+        return await getPendingProjects(env, origin);
       }
       
       if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {
