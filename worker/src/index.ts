@@ -130,10 +130,11 @@ async function clearAuthCookies(response: Response, origin: string | null): Prom
 }
 
 function getCorsHeaders(origin: string | null) {
+  // With credentials: 'include', Firefox requires exact origin (not *)
   return {
     'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Build-Key',
     'Access-Control-Allow-Credentials': 'true',
   };
 }
@@ -443,7 +444,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
   const uid = String(user.userId);
   const result = await env.DB.prepare(`
     INSERT INTO projects (account_id, submission_id, title, description, deploy_method, status)
-    SELECT ?, ?, ?, ?, ?, 'pending'
+    SELECT ?, ?, ?, ?, ?, 'building'
     WHERE EXISTS (
       SELECT 1 FROM students s
       JOIN students_classes sc ON sc.class_id = ?
@@ -462,21 +463,41 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
   const project = await env.DB.prepare(`
     SELECT id FROM projects ORDER BY rowid DESC LIMIT 1
   `).first<{ id: number }>();
-  
-  const buildUrl = env.BUILD_SERVER_URL?.replace('http://', '').replace('https://', '');
-  const buildParts = buildUrl?.split(':');
-  const buildHost = buildParts?.[0] || 'iloveuvania.omraheja.me';
-  
-  fetch(`${buildUrl?.startsWith('http') ? buildUrl : 'http://' + buildHost}/build`, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'X-Build-Key': 'codeabode-build-secret-2026'
-    },
-    body: JSON.stringify({ project_id: project?.id, code: 'from submission' }),
-  }).catch(console.error);
-  
-  return new Response(JSON.stringify({ id: project?.id, status: 'pending' }), {
+
+  if (project && submissionId) {
+    const subWork = await env.DB.prepare(`
+      SELECT work FROM submissions WHERE id = ?
+    `).bind(submissionId).first<{ work: string }>();
+    
+    if (subWork?.work) {
+      console.log(`SubmitProject: Building project ${project.id} with code from submission ${submissionId}`);
+      
+      // Make synchronous call to build server and wait for response
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      
+      try {
+        const buildRes = await fetch('https://iloveuvania.omraheja.me/build', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Build-Key': 'codeabode-build-secret-2026'
+          },
+          body: JSON.stringify({ project_id: project.id, code: subWork.work }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        const result = await buildRes.json();
+        console.log(`SubmitProject: Build result: ${JSON.stringify(result)}`);
+      } catch (e) {
+        console.error(`SubmitProject: Build failed: ${e}`);
+      }
+    } else {
+      console.log(`SubmitProject: No work found for submission ${submissionId}`);
+    }
+  }
+
+  return new Response(JSON.stringify({ id: project?.id, status: 'building' }), {
     headers: getCorsHeaders(request.headers.get('Origin'))
   });
 }
@@ -511,22 +532,42 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
   
   // Map: project ID -> hash folder
   // Based on server: 1->21e45ace6825a646, 2->23a52cae35194413, etc
-  const idToHash: Record<number, string> = {
-    1: '21e45ace6825a646',
-    2: '23a52cae35194413', 
-    3: '48421c24bc92cf11',
-    4: 'cfc400746593e18f',
-  };
-  
   const result = projects.results.map(p => ({
     ...p,
-    url: idToHash[p.id] ? `${buildServer}/static/projects/${idToHash[p.id]}/index.html` : null,
+    url: p.status === 'ready' ? `${buildServer}/static/projects/${p.id}/build/web/index.html` : null,
   }));
   
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
 }
 
-async function getPendingProjects(env: Env, origin: string | null): Promise<Response> {
+async function getAllProjectsList(env: Env, origin: string | null): Promise<Response> {
+  const projects = await env.DB.prepare(`
+    SELECT p.id, p.title, p.description, p.account_id, p.views, p.status, p.submission_id, p.created_at
+    FROM projects p
+    ORDER BY p.created_at DESC
+    LIMIT 20
+  `).all<{
+    id: number;
+    title: string;
+    description: string;
+    account_id: number | null;
+    views: number;
+    status: string;
+    submission_id: number | null;
+    created_at: string;
+  }>();
+  
+  const buildServer = env.BUILD_SERVER_URL || 'https://iloveuvania.omraheja.me';
+  
+  const result = projects.results.map(p => ({
+    ...p,
+    url: p.status === 'ready' ? `${buildServer}/static/projects/${p.id}/build/web/index.html` : null,
+  }));
+  
+  return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
+}
+
+async function getPendingProjectsCheck(env: Env, origin: string | null): Promise<Response> {
   const projects = await env.DB.prepare(`
     SELECT p.id, p.title, p.submission_id, p.created_at
     FROM projects p
@@ -547,6 +588,27 @@ async function getPendingProjects(env: Env, origin: string | null): Promise<Resp
   }
   
   return new Response(JSON.stringify(projects.results), { headers: getCorsHeaders(origin) });
+}
+
+async function updateProjectStatus(env: Env, id: number, request: Request, origin: string | null): Promise<Response> {
+  try {
+    // Allow requests from build server without origin header
+    const buildKey = request.headers.get('X-Build-Key');
+    const effectiveOrigin = buildKey === 'codeabode-build-secret-2026' ? '*' : origin;
+    
+    const body = await request.json<{ status: string }>();
+    await env.DB.prepare(`UPDATE projects SET status = ? WHERE id = ?`).bind(body.status, id).run();
+    return new Response(JSON.stringify({ success: true }), { 
+      headers: { 
+        'Access-Control-Allow-Origin': effectiveOrigin || '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Build-Key',
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e) }), { status: 400, headers: getCorsHeaders(origin) });
+  }
 }
 
 async function incrementProjectView(env: Env, id: number, origin: string | null): Promise<Response> {
@@ -611,8 +673,17 @@ export default {
         return await listProjects(env, origin);
       }
       
+      if (path === '/api/projects/all' && request.method === 'GET') {
+        return await getAllProjectsList(env, origin);
+      }
+      
       if (path === '/api/projects/pending' && request.method === 'GET') {
         return await getPendingProjects(env, origin);
+      }
+
+      if (path.startsWith('/api/projects/') && path.endsWith('/status') && request.method === 'PATCH') {
+        const id = parseInt(path.split('/')[3]);
+        return await updateProjectStatus(env, id, request, origin);
       }
       
       if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {

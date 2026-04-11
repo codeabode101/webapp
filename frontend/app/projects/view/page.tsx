@@ -73,13 +73,14 @@ function ProjectContent() {
       </p>
       <p className="mb-4">{project.description}</p>
 
-      {project.status === 'ready' ? (
+{project.status === 'ready' ? (
         <div className="border border-[var(--border)] rounded overflow-hidden aspect-video">
           <iframe
             src={project.url}
             className="w-full h-full"
             sandbox="allow-scripts allow-same-origin allow-forms"
             title={project.title}
+            onError={() => setError('Game not loaded - may need rebuild')}
           />
         </div>
       ) : showBuilding ? (
