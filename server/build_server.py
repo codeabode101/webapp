@@ -85,10 +85,10 @@ class Handler(BaseHTTPRequestHandler):
                 
                 if project_id and code:
                     print(f"Project {project_id}: starting build. lang detection...")
-                        project_dir = os.path.join(BUILDS_DIR, str(project_id))
-                        os.makedirs(project_dir, exist_ok=True)
-                        
-                        lang = detect_language(code)
+                    project_dir = os.path.join(BUILDS_DIR, str(project_id))
+                    os.makedirs(project_dir, exist_ok=True)
+
+                    lang = detect_language(code)
                     print(f"Project {project_id}: Detected {lang}")
                     
                     if lang == "java":

@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS students_classes (
     class_id INTEGER PRIMARY KEY AUTOINCREMENT,
     status TEXT NOT NULL,
     name TEXT NOT NULL,
+    class_type TEXT,  -- "traditional" | "experimental" | "self_directed"
+    class_date TEXT,   -- "2026-04-17"
+    accomplished TEXT[], -- what was done in class (replaces taught_methods)
     relevance TEXT,
     methods TEXT NOT NULL DEFAULT '[]',
     stretch_methods TEXT,

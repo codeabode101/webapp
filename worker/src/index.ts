@@ -19,6 +19,9 @@ interface StudentClass {
   class_id: number;
   status: string;
   name: string;
+  class_type: string | null;
+  class_date: string | null;
+  accomplished: string | null;
   methods: string;
   stretch_methods: string | null;
   description: string;
@@ -240,21 +243,24 @@ async function getStudent(request: Request, env: Env, id: number): Promise<Respo
   }
   
   const classes = await env.DB.prepare(`
-    SELECT sc.class_id, sc.status, sc.name, sc.methods, sc.stretch_methods,
-           sc.description, sc.classwork, sc.notes, sc.hw, sc.hw_notes,
+    SELECT sc.class_id, sc.status, sc.name, sc.class_type, sc.class_date, sc.accomplished,
+           sc.methods, sc.stretch_methods, sc.description, sc.classwork,
+           sc.notes, sc.hw, sc.hw_notes,
            (
-             SELECT s2.work FROM submissions s2 
+             SELECT s2.work FROM submissions s2
              WHERE s2.class_id = sc.class_id AND s2.work_type = 'classwork'
              ORDER BY id DESC LIMIT 1
            ) as classwork_submission,
            (
-             SELECT s2.work FROM submissions s2 
+             SELECT s2.work FROM submissions s2
              WHERE s2.class_id = sc.class_id AND s2.work_type = 'homework'
              ORDER BY id DESC LIMIT 1
            ) as homework_submission
     FROM students_classes sc
     WHERE sc.student_id = ?
-    ORDER BY sc.class_id DESC
+    ORDER BY 
+      CASE WHEN sc.status = 'current' THEN 0 ELSE 1 END,
+      sc.class_id DESC
   `).bind(id).all<StudentClass>();
   
   const result = {
@@ -262,6 +268,9 @@ async function getStudent(request: Request, env: Env, id: number): Promise<Respo
     future_concepts: parseJsonArray(student.future_concepts),
     classes: classes.results.map(c => ({
       ...c,
+      class_type: c.class_type || null,
+      class_date: c.class_date || null,
+      accomplished: parseJsonArray(c.accomplished),
       methods: parseJsonArray(c.methods),
       stretch_methods: parseJsonArray(c.stretch_methods),
     })),
@@ -704,7 +713,7 @@ export default {
           return new Response('Not found', { status: 404 });
         }
       }
-      
+
       return new Response('Not found', { status: 404 });
     } catch (error) {
       console.error(error);
