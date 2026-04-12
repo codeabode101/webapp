@@ -14,6 +14,7 @@ import {
   updateStudentInfo,
   updateClass,
   d1Exec,
+  getAccountsForStudent,
 } from "./d1.js";
 import {
   generateClasswork as genClasswork,
@@ -21,6 +22,7 @@ import {
   analyzeClass,
   generateHomework,
 } from "./gpt.js";
+import { sendHomeworkEmail, EmailContext } from "./email.js";
 import { Student, StudentClass, CliAction, ClassAction } from "./types.js";
 
 const generateClasswork = genClasswork;
@@ -482,6 +484,40 @@ async function runHomeworkFlow(
   // Save homework
   if (hwText.trim()) {
     await updateClass(currentClass.class_id, { hw: hwText });
+  }
+
+  // Send email to student's accounts if homework was assigned
+  if (hwText.trim()) {
+    const emailSpinner = ora("Sending notification emails...").start();
+    try {
+      const accounts = await getAccountsForStudent(studentId);
+      const emailCtx: EmailContext = {
+        studentName: student.name,
+        className: currentClass.name,
+        taughtMethods: currentClass.taught_methods || "",
+        needsPractice: currentClass.needs_practice || "",
+        classDescription: currentClass.description || "",
+        intendedMethods: currentClass.methods || "",
+        stretchMethods: currentClass.stretch_methods || "",
+      };
+
+      let sentCount = 0;
+      for (const account of accounts) {
+        if (account.email) {
+          const ok = await sendHomeworkEmail(account.email, account.name, emailCtx);
+          if (ok) sentCount++;
+        }
+      }
+
+      if (sentCount > 0) {
+        emailSpinner.succeed(`Sent emails to ${sentCount} account(s)`);
+      } else {
+        emailSpinner.info("No email addresses found or emails disabled");
+      }
+    } catch (error) {
+      emailSpinner.fail("Failed to send emails");
+      console.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
   // Ask to finish now or check hw first

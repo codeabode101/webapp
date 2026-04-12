@@ -314,7 +314,7 @@ export async function updateClass(
 ): Promise<void> {
   const sets: string[] = [];
   const values: string[] = [];
-  
+
   if (data.name !== undefined) {
     sets.push(`name = '${data.name.replace(/'/g, "''")}'`);
   }
@@ -357,8 +357,36 @@ export async function updateClass(
   if (data.needs_practice !== undefined) {
     sets.push(`needs_practice = '${data.needs_practice.replace(/'/g, "''")}'`);
   }
-  
+
   if (sets.length === 0) return;
-  
+
   await d1Exec(`UPDATE students_classes SET ${sets.join(", ")} WHERE class_id = ${classId}`);
+}
+
+export interface Account {
+  id: number;
+  name: string;
+  email: string | null;
+}
+
+export async function getAccountsForStudent(studentId: number): Promise<Account[]> {
+  const student = await d1Query<{ account_id: string | null }>(
+    `SELECT account_id FROM students WHERE id = ${studentId}`
+  );
+
+  if (!student[0]?.account_id) return [];
+
+  // account_id is stored as JSON array like "{1,3}"
+  const raw = student[0].account_id.replace(/[{}]/g, "");
+  const ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
+
+  const accounts: Account[] = [];
+  for (const id of ids) {
+    const results = await d1Query<Account>(
+      `SELECT id, name, email FROM accounts WHERE id = ${id}`
+    );
+    accounts.push(...results);
+  }
+
+  return accounts;
 }
