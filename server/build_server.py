@@ -9,6 +9,16 @@ PORT = 3000
 BUILDS_DIR = "/var/www/games"
 API_URL = "https://api.codeabode.co/api/projects/{}/status"
 
+def detect_language(code):
+    code = code.strip()
+    if code.startswith("import java") or code.startswith("public class"):
+        return "java"
+    elif code.startswith("import pygame") or code.startswith("import turtle") or "pygame.init()" in code:
+        return "pygame"
+    elif "def " in code and ": " in code:
+        return "python"
+    return "python"
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         print(f"[{format % args}]")
@@ -36,29 +46,42 @@ class Handler(BaseHTTPRequestHandler):
                     project_dir = os.path.join(BUILDS_DIR, str(project_id))
                     os.makedirs(project_dir, exist_ok=True)
                     
-                    main_file = os.path.join(project_dir, "main.py")
-                    with open(main_file, 'w') as f:
-                        f.write(code)
+                    lang = detect_language(code)
+                    print(f"Project {project_id}: Detected language: {lang}")
                     
-                    print(f"Project {project_id}: Created main.py, building...")
-                    
-                    result = subprocess.run(
-                        ["python3", "-m", "pygbag", "--build", project_dir],
-                        capture_output=True, text=True,
-                        cwd=project_dir
-                    )
-                    
-                    if result.returncode == 0:
-                        print(f"Project {project_id}: Build successful!")
+                    if lang == "java":
+                        # Write Java file
+                        java_file = os.path.join(project_dir, "Main.java")
+                        with open(java_file, 'w') as f:
+                            f.write(code)
+                        print(f"Project {project_id}: Java file written, skipping build (needs appletviewer)")
                         self._update_status(project_id, 'ready')
                     else:
-                        print(f"Project {project_id}: Build failed - {result.stderr}")
-                        self._update_status(project_id, 'failed')
+                        # Python/pygame
+                        if code.strip():
+                            main_file = os.path.join(project_dir, "main.py")
+                            with open(main_file, 'w') as f:
+                                f.write(code)
+                        
+                        print(f"Project {project_id}: Created main.py, building...")
+                        
+                        result = subprocess.run(
+                            ["python3", "-m", "pygbag", "--build", project_dir],
+                            capture_output=True, text=True,
+                            cwd=project_dir
+                        )
+                        
+                        if result.returncode == 0:
+                            print(f"Project {project_id}: Build successful!")
+                            self._update_status(project_id, 'ready')
+                        else:
+                            print(f"Project {project_id}: Build failed - {result.stderr}")
+                            self._update_status(project_id, 'failed')
                     
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.end_headers()
-                    self.wfile.write(json.dumps({"success": True}).encode())
+                    self.wfile.write(json.dumps({"success": True, "language": lang}).encode())
                     return
             except Exception as e:
                 print(f"Error: {e}")
