@@ -167,13 +167,15 @@ export async function listStudents(): Promise<Student[]> {
 
 export async function getStudent(id: number): Promise<Student | null> {
   const results = await d1Query<Student>(
-    `SELECT id, name, age, current_level, final_goal, future_concepts, notes, current_class, step FROM students WHERE id = ${id}`
+    `SELECT id, name, age, current_level, final_goal, future_concepts, notes, current_class, step, classes_used, classes_paid FROM students WHERE id = ${id}`
   );
   if (!results[0]) return null;
-  
+
   return {
     ...results[0],
     step: results[0].step || 1,
+    classes_used: results[0].classes_used || 0,
+    classes_paid: results[0].classes_paid || 0,
   };
 }
 
@@ -389,4 +391,12 @@ export async function getAccountsForStudent(studentId: number): Promise<Account[
   }
 
   return accounts;
+}
+
+export async function incrementClassesUsed(studentId: number): Promise<void> {
+  await d1Exec(`UPDATE students SET classes_used = classes_used + 1 WHERE id = ${studentId}`);
+}
+
+export async function recordPayment(studentId: number, classesCount: number): Promise<void> {
+  await d1Exec(`UPDATE students SET classes_paid = classes_paid + ${classesCount} WHERE id = ${studentId}`);
 }

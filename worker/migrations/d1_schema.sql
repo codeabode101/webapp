@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS students (
     future_concepts TEXT NOT NULL DEFAULT '[]',
     notes TEXT,
     account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
-    current_class INTEGER
+    current_class INTEGER,
+    classes_used INTEGER DEFAULT 0,
+    classes_paid INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS students_classes (

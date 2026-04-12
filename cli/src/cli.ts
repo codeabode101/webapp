@@ -15,6 +15,8 @@ import {
   updateClass,
   d1Exec,
   getAccountsForStudent,
+  incrementClassesUsed,
+  recordPayment,
 } from "./d1.js";
 import {
   generateClasswork as genClasswork,
@@ -131,6 +133,79 @@ export async function runDelete(): Promise<void> {
   }
 }
 
+export async function runPay(): Promise<void> {
+  const spinner = ora("Loading students...").start();
+
+  let students: Student[];
+  try {
+    students = await listStudents();
+    spinner.stop();
+  } catch (error) {
+    spinner.fail("Failed to load students");
+    printError(error instanceof Error ? error.message : String(error));
+    return;
+  }
+
+  if (students.length === 0) {
+    console.log("No students found.");
+    return;
+  }
+
+  // Show payment status for all students
+  printHeader("Payment Status");
+  for (const s of students) {
+    const used = s.classes_used || 0;
+    const paid = s.classes_paid || 0;
+    const owed = Math.max(0, used - paid);
+    const icon = owed > 0 ? "⚠️ " : used === paid && paid > 0 ? "💰" : "✅";
+    console.log(`  ${icon} ${s.name}: ${used}/${paid}${owed > 0 ? ` (${owed} unpaid)` : ""}`);
+  }
+  console.log();
+
+  const { studentId } = await inquirer.prompt({
+    type: "list",
+    name: "studentId",
+    message: "Select student to record payment:",
+    choices: [
+      ...students.map((s) => ({
+        name: `${s.name} (${s.classes_used || 0}/${s.classes_paid || 0})`,
+        value: s.id,
+      })),
+      { name: "Cancel", value: -1 },
+    ],
+    loop: false,
+  });
+
+  if (studentId === -1) {
+    console.log("Cancelled.");
+    return;
+  }
+
+  const student = students.find((s) => s.id === studentId);
+  const { classesCount } = await inquirer.prompt({
+    type: "input",
+    name: "classesCount",
+    message: `How many classes did ${student?.name} pay for?`,
+    default: 4,
+    validate: (input) => {
+      const num = parseInt(input);
+      return (!isNaN(num) && num > 0) || "Enter a positive number";
+    },
+    filter: (input) => parseInt(input),
+  });
+
+  const paySpinner = ora("Recording payment...").start();
+  try {
+    await recordPayment(studentId, classesCount);
+    paySpinner.succeed(`Added ${classesCount} classes to ${student?.name}`);
+    const updated = await getStudent(studentId);
+    console.log(`  New status: ${updated?.classes_used || 0}/${updated?.classes_paid || 0}`);
+  } catch (error) {
+    paySpinner.fail("Failed");
+    printError(error instanceof Error ? error.message : String(error));
+  }
+}
+
 export async function runContinue(): Promise<void> {
   const spinner = ora("Loading students...").start();
 
@@ -185,6 +260,16 @@ export async function runContinue(): Promise<void> {
   printHeader(student.name);
   console.log(`Step: ${student.step || 1}`);
   console.log(`Level: ${student.current_level || "N/A"}`);
+
+  const used = student.classes_used || 0;
+  const paid = student.classes_paid || 0;
+  const owed = Math.max(0, used - paid);
+  const paymentStatus = owed > 0
+    ? `⚠️  Payment: ${used}/${paid} — ${owed} class(es) UNPAID`
+    : paid > 0 && used === paid
+    ? `💰 Payment: ${used}/${paid} — DUE for renewal`
+    : `✅ Payment: ${used}/${paid} — ${paid - used} class(es) remaining`;
+  console.log(paymentStatus);
   console.log();
 
   const current = classes.find((c) => c.status === "current");
@@ -319,6 +404,7 @@ async function handleStep1(
       status: "current", // keep as current until Step 2 finishes
     });
     await updateStudentInfo(studentId, { step: 2 });
+    await incrementClassesUsed(studentId);
     spinner.succeed("Saved! Next: continue to check hw.");
   } catch (error) {
     spinner.fail("Failed");
@@ -982,6 +1068,7 @@ ${ORANGE}
         { name: "List students", value: "list" },
         { name: "New student", value: "new" },
         { name: "Delete student", value: "delete" },
+        { name: "Record payment", value: "pay" },
         { name: "Switch database", value: "switch" },
         { name: "Exit", value: "exit" },
       ],
@@ -1012,6 +1099,9 @@ ${ORANGE}
         break;
       case "delete":
         await runDelete();
+        break;
+      case "pay":
+        await runPay();
         break;
     }
   }

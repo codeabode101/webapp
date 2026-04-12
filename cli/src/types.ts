@@ -9,6 +9,8 @@ export interface Student {
   account_id?: number | null;
   current_class?: number | null;
   step?: number;
+  classes_used?: number;
+  classes_paid?: number;
 }
 
 export interface StudentClass {
