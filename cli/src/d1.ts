@@ -398,5 +398,11 @@ export async function incrementClassesUsed(studentId: number): Promise<void> {
 }
 
 export async function recordPayment(studentId: number, classesCount: number): Promise<void> {
-  await d1Exec(`UPDATE students SET classes_paid = classes_paid + ${classesCount} WHERE id = ${studentId}`);
+  // Roll over: subtract paid from used, then set new paid
+  await d1Exec(
+    `UPDATE students SET
+      classes_used = MAX(0, classes_used - classes_paid),
+      classes_paid = ${classesCount}
+     WHERE id = ${studentId}`
+  );
 }
