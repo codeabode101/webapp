@@ -77,17 +77,19 @@ class Handler(BaseHTTPRequestHandler):
                 print(f"Project {project_id}: key={build_key[:20] if build_key else 'None'}..., code_len={len(code) if code else 0}")
                 
                 if build_key != 'codeabode-build-secret-2026':
+                    print("Unauthorized")
                     self.send_response(401)
                     self.end_headers()
                     self.wfile.write(b'Unauthorized')
                     return
                 
                 if project_id and code:
-                    project_dir = os.path.join(BUILDS_DIR, str(project_id))
-                    os.makedirs(project_dir, exist_ok=True)
-                    
-                    lang = detect_language(code)
-                    print(f"Project {project_id}: Detected language: {lang}")
+                    print(f"Project {project_id}: starting build. lang detection...")
+                        project_dir = os.path.join(BUILDS_DIR, str(project_id))
+                        os.makedirs(project_dir, exist_ok=True)
+                        
+                        lang = detect_language(code)
+                    print(f"Project {project_id}: Detected {lang}")
                     
                     if lang == "java":
                         # Decode escape sequences (JSON sends \n as \\n)
@@ -102,7 +104,7 @@ class Handler(BaseHTTPRequestHandler):
                         # Compile Java to bytecode
                         compile_result = subprocess.run(
                             ["javac", "-source", "8", "-target", "8", "-d", project_dir, java_file],
-                            capture_output=True, text=True
+                            capture_output=True, text=True, timeout=30
                         )
                         
                         if compile_result.returncode == 0:
