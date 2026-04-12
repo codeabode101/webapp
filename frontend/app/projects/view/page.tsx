@@ -78,7 +78,7 @@ function ProjectContent() {
           <iframe
             src={project.url}
             className="w-full h-full"
-            sandbox="allow-scripts allow-same-origin allow-forms"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
             title={project.title}
             onError={() => setError('Game not loaded - may need rebuild')}
           />

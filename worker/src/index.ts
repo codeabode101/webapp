@@ -130,12 +130,12 @@ async function clearAuthCookies(response: Response, origin: string | null): Prom
 }
 
 function getCorsHeaders(origin: string | null) {
-  // With credentials: 'include', Firefox requires exact origin (not *)
   return {
     'Access-Control-Allow-Origin': origin || '*',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Build-Key',
     'Access-Control-Allow-Credentials': 'true',
+    'Content-Security-Policy': "worker-src 'self' blob: https://cjrtnc.leaningtech.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cjrtnc.leaningtech.com; connect-src 'self' https://cjrtnc.leaningtech.com blob: data:; default-src 'self' blob: data:;",
   };
 }
 
@@ -528,15 +528,12 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
     created_at: string;
   }>();
   
-  const buildServer = env.BUILD_SERVER_URL || 'http://iloveuvania.omraheja.me';
-  
-  // Map: project ID -> hash folder
-  // Based on server: 1->21e45ace6825a646, 2->23a52cae35194413, etc
+// Use absolute URL for static files (so they work in iframe on other domains)
   const result = projects.results.map(p => ({
     ...p,
-    url: p.status === 'ready' ? `${buildServer}/static/projects/${p.id}/build/web/index.html` : null,
+    url: p.status === 'ready' ? `https://api.codeabode.co/static/projects/${p.id}/build/web/index.html` : null,
   }));
-  
+
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
 }
 
@@ -557,13 +554,12 @@ async function getAllProjectsList(env: Env, origin: string | null): Promise<Resp
     created_at: string;
   }>();
   
-  const buildServer = env.BUILD_SERVER_URL || 'https://iloveuvania.omraheja.me';
-  
+  // Use absolute URL for static files
   const result = projects.results.map(p => ({
     ...p,
-    url: p.status === 'ready' ? `${buildServer}/static/projects/${p.id}/build/web/index.html` : null,
+    url: p.status === 'ready' ? `https://api.codeabode.co/static/projects/${p.id}/build/web/index.html` : null,
   }));
-  
+
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
 }
 
@@ -689,6 +685,24 @@ export default {
       if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {
         const id = parseInt(path.split('/')[3]);
         return await incrementProjectView(env, id, origin);
+      }
+      
+      // Proxy static files from build server (same-origin workaround)
+      if (path.startsWith('/static/projects/')) {
+        const buildUrl = `https://iloveuvania.omraheja.me${path}`;
+        try {
+          const buildResp = await fetch(buildUrl);
+          const body = await buildResp.arrayBuffer();
+          return new Response(body, {
+            status: buildResp.status,
+            headers: {
+              'Content-Type': buildResp.headers.get('Content-Type') || 'application/octet-stream',
+              'Access-Control-Allow-Origin': '*',
+            }
+          });
+        } catch (e) {
+          return new Response('Not found', { status: 404 });
+        }
       }
       
       return new Response('Not found', { status: 404 });
