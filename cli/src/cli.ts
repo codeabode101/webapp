@@ -57,7 +57,11 @@ export async function runList(): Promise<void> {
 
     printHeader("Students");
     for (const student of students) {
-      console.log(`  ${student.id}: ${student.name}`);
+      const used = student.classes_used || 0;
+      const paid = student.classes_paid || 0;
+      const owed = Math.max(0, used - paid);
+      const payBadge = owed > 0 ? ` ⚠️ ${used}/${paid}` : ` ✅ ${used}/${paid}`;
+      console.log(`  ${student.id}: ${student.name}${payBadge}`);
     }
     console.log(`\nTotal: ${students.length} students\n`);
   } catch (error) {

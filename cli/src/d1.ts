@@ -162,7 +162,7 @@ export async function deleteStudent(studentId: number): Promise<void> {
 }
 
 export async function listStudents(): Promise<Student[]> {
-  return d1Query<Student>("SELECT id, name FROM students ORDER BY name");
+  return d1Query<Student>("SELECT id, name, classes_used, classes_paid FROM students ORDER BY name");
 }
 
 export async function getStudent(id: number): Promise<Student | null> {
