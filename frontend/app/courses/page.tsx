@@ -33,7 +33,7 @@ export default function CoursesPage() {
   };
 
   const renderCourse = (courseKey: 'python' | 'javascript') => {
-    if (!courses) return null;
+    if (!courses || !courses[courseKey]) return null;
     const course = courses[courseKey];
     const lang = courseKey === 'python' ? 'Python' : 'JavaScript';
 
@@ -41,7 +41,7 @@ export default function CoursesPage() {
       <div className="course-section">
         <h2>{lang}</h2>
         <div className="classes-list">
-          {course.map((cls, idx) => (
+          {course && course.map((cls: CourseItem, idx: number) => (
             <div key={cls.name} className="class-card">
               <button
                 className="class-button"
