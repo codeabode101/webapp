@@ -625,89 +625,31 @@ async function incrementProjectView(env: Env, id: number, origin: string | null)
 }
 
 const PYTHON_COURSE = [
-  { week: 1, classes: [
-    { name: "1.1 Introduction to Python & Print", description: "Learn what Python is, how to run code, and your first function: print()", content: "Students learn the basics of Python programming including how to set up their environment, what programming is, and write their first program using print() to display output." },
-    { name: "1.2 Variables & User Input", description: "Store data with variables and get input with input()", content: "Students learn to store data in variables, understand different data types (strings, numbers), and use input() to interact with users." },
-  ]},
-  { week: 2, classes: [
-    { name: "2.1 Math Operations", description: "Perform calculations with Python", content: "Learn arithmetic operators (+, -, *, /), order of operations, and using math in programs." },
-    { name: "2.2 String Formatting", description: "Combine strings and numbers elegantly", content: "Learn f-strings, string concatenation, and how to format output nicely." },
-  ]},
-  { week: 3, classes: [
-    { name: "3.1 Conditionals (if/else)", description: "Make decisions in code", content: "Learn if/elif/else statements, comparison operators, and making programs that make decisions." },
-    { name: "3.2 Boolean Logic", description: "Combine conditions with and/or/not", content: "Learn boolean operators, truth tables, and complex conditionals." },
-  ]},
-  { week: 4, classes: [
-    { name: "4.1 While Loops", description: "Repeat code with while loops", content: "Learn while loops, infinite loops, loop control with break and continue." },
-    { name: "4.2 For Loops", description: "Iterate with for loops", content: "Learn for loops, range(), and iterating over sequences." },
-  ]},
-  { week: 5, classes: [
-    { name: "5.1 Lists", description: "Store multiple values in lists", content: "Learn list creation, indexing, slicing, and basic list operations." },
-    { name: "5.2 List Methods", description: "Modify lists with built-in methods", content: "Learn append, remove, pop, and other list methods." },
-  ]},
-  { week: 6, classes: [
-    { name: "6.1 Functions", description: "Create reusable code blocks", content: "Learn function definition, parameters, return values, and calling functions." },
-    { name: "6.2 Scope", description: "Understand variable scope", content: "Learn local vs global scope, and when to use which." },
-  ]},
-  { week: 7, classes: [
-    { name: "7.1 Project: Number Guessing Game", description: "Build your first game!", content: "Create a number guessing game using all concepts learned so far - conditionals, loops, random numbers, and functions." },
-    { name: "7.2 Project Enhancements", description: "Add features to your game", content: "Add lives, hints, difficulty levels, and replay functionality." },
-  ]},
-  { week: 8, classes: [
-    { name: "8.1 Dictionaries", description: "Store key-value pairs", content: "Learn dictionary creation, accessing values, adding/removing keys." },
-    { name: "8.2 Nested Data", description: "Complex data structures", content: "Learn nested dictionaries and lists within dictionaries." },
-  ]},
-  { week: 9, classes: [
-    { name: "9.1 File Reading", description: "Read from files", content: "Learn to open, read, and process files in Python." },
-    { name: "9.2 File Writing", description: "Write to files", content: "Learn to write and append to files." },
-  ]},
-  { week: 10, classes: [
-    { name: "10.1 Final Project Planning", description: "Plan your final game", content: "Design and plan a more complex game using all learned concepts." },
-    { name: "10.2 Final Project", description: "Build your final game!", content: "Build a complete game with menus, scoring, file saving/loading." },
-  ]},
+  { name: "Variables", description: "Learn what variables are, how to name them, and different data types (strings, numbers, booleans)", content: "Variables are containers for storing data. In Python, you create a variable by simply assigning a value: name = 'John', age = 12. Variable names should describe what they store. Python has several data types: strings (text in quotes), integers (whole numbers), floats (decimal numbers), and booleans (True/False)." },
+  { name: "Functions", description: "Create reusable blocks of code with def", content: "Functions let you organize code into reusable blocks. Define with def function_name(): and call with function_name(). Functions can take parameters (inputs) and return values. This avoids repeating code." },
+  { name: "Conditionals", description: "Make decisions with if/elif/else", content: "Conditionals let your program make decisions. Use if condition: for true, elif other: for alternatives, else: for everything else. Comparison operators: ==, !=, <, >, <=, >=" },
+  { name: "Loops", description: "Repeat code with for and while loops", content: "Loops repeat code multiple times. for i in range(5): repeats 5 times. while condition: repeats while true. Use break to exit early, continue to skip to next iteration." },
+  { name: "Exceptions", description: "Handle errors gracefully", content: "Use try/except to handle errors: try: risky code, except: what to do if error. This prevents your program from crashing when something goes wrong." },
+  { name: "Libraries", description: "Use pre-written code with import", content: "Libraries extend Python's abilities. import random for random numbers, import math for math functions. Use random.randint(1, 10), math.sqrt(16)." },
+  { name: "Unit Tests", description: "Test your code automatically", content: "Unit tests verify your code works. Use assert to check: assert add(2,3) == 5. If the statement is false, Python raises an error." },
+  { name: "File I/O", description: "Read and write files", content: "Read files: with open('file.txt') as f: content = f.read(). Write files: with open('file.txt', 'w') as f: f.write('text'). Always close files or use 'with' statement." },
+  { name: "Regular Expressions", description: "Find patterns in text", content: "Regular expressions find patterns in text. import re. re.search(r'pattern', text). Common patterns: \\d for digits, \\w for word characters, + for one or more." },
+  { name: "Object-Oriented Programming", description: "Create classes and objects", content: "Classes are blueprints for objects. class Dog: def __init__(self, name): self.name = name. Create object: buddy = Dog('Buddy'). Objects have attributes (data) and methods (functions)." },
+  { name: "Project: Text Adventure", description: "Build a text-based adventure game!", content: "Combine everything to build a text adventure game with multiple rooms, items, and player choices. Save progress, add enemies, and create win/lose conditions." },
 ];
 
 const JAVASCRIPT_COURSE = [
-  { week: 1, classes: [
-    { name: "1.1 Intro to JS & Console", description: "Learn JavaScript basics and console.log()", content: "Introduction to JavaScript in the browser, using console.log() for debugging." },
-    { name: "1.2 Variables & Data Types", description: "Declare variables with let/const", content: "Learn let, const, strings, numbers, and booleans." },
-  ]},
-  { week: 2, classes: [
-    { name: "2.1 DOM Manipulation", description: "Change page content", content: "Learn document.getElementById, innerText, and textContent." },
-    { name: "2.2 Event Listeners", description: "Respond to user clicks", content: "Learn addEventListener and handling click events." },
-  ]},
-  { week: 3, classes: [
-    { name: "3.1 Conditionals", description: "if/else in JavaScript", content: "Learn conditional logic in JS." },
-    { name: "3.2 Comparison Operators", description: "Compare values", content: "Learn ===, !==, <, >, &&, ||" },
-  ]},
-  { week: 4, classes: [
-    { name: "4.1 Loops", description: "for and while loops", content: "Learn to repeat code with loops." },
-    { name: "4.2 Array Methods", description: "map, filter, reduce", content: "Learn functional array methods." },
-  ]},
-  { week: 5, classes: [
-    { name: "5.1 Functions", description: "Create reusable code", content: "Learn function declaration and arrow functions." },
-    { name: "5.2 Project: Clicker Game", description: "Build a clicker game", content: "Create a simple clicker game with DOM manipulation." },
-  ]},
-  { week: 6, classes: [
-    { name: "6.1 LocalStorage", description: "Save data in browser", content: "Learn to persist data with localStorage." },
-    { name: "6.2 Project: Todo List", description: "Build a todo app", content: "Create a todo list that saves to localStorage." },
-  ]},
-  { week: 7, classes: [
-    { name: "7.1 Canvas API", description: "Draw graphics", content: "Learn HTML5 Canvas for custom graphics." },
-    { name: "7.2 Animation", description: "Animate on canvas", content: "Learn requestAnimationFrame for smooth animation." },
-  ]},
-  { week: 8, classes: [
-    { name: "8.1 Game Loop", description: "Core game loop", content: "Learn proper game loop architecture." },
-    { name: "8.2 Collision Detection", description: "Detect object collisions", content: "Learn basic collision detection." },
-  ]},
-  { week: 9, classes: [
-    { name: "9.1 Sprite Animation", description: "Animated sprites", content: "Learn sprite sheet animation." },
-    { name: "9.2 Sound", description: "Add audio to games", content: "Learn Web Audio API basics." },
-  ]},
-  { week: 10, classes: [
-    { name: "10.1 Final Project", description: "Build your JS game!", content: "Create a complete browser game." },
-    { name: "10.2 Polish & Deploy", description: "Finish and share", content: "Polish, test, and deploy your game." },
-  ]},
+  { name: "Variables & Data Types", description: "let, const, strings, numbers, booleans", content: "JavaScript variables: let (can change) and const (cannot change). Data types: strings ('text'), numbers (123), booleans (true/false)." },
+  { name: "Console & Debugging", description: "Use console.log() to find bugs", content: "console.log('message') prints to browser console. Use this to debug: check values, see where code stops, trace errors." },
+  { name: "DOM Manipulation", description: "Change page content with JavaScript", content: "document.getElementById('id') gets element. element.textContent = 'new text' changes text. element.innerHTML for HTML." },
+  { name: "Event Listeners", description: "Respond to clicks and other events", content: "element.addEventListener('click', function) runs code when clicked. Other events: 'mouseover', 'keydown', 'submit'." },
+  { name: "Conditionals", description: "if/else for decisions", content: "if (condition) { code }, else { code }. Comparison: === (equal), !== (not equal), > < >= <=" },
+  { name: "Loops", description: "for and while to repeat code", content: "for (let i = 0; i < 5; i++) { code } runs 5 times. while (condition) { code } repeats while true." },
+  { name: "Functions", description: "Create reusable code blocks", content: "function name() { code } or const name = () => { code }. Call: name(). Parameters: function(a, b) { return a + b }" },
+  { name: "Arrays", description: "Store lists of data", content: "const arr = [1, 2, 3]. Access: arr[0]. Methods: arr.push(), arr.pop(), arr.length. Loop: for (let item of arr)" },
+  { name: "Objects", description: "Store key-value pairs", content: "const obj = {name: 'John', age: 12}. Access: obj.name or obj['name']. Add: obj.city = 'NYC'." },
+  { name: "Classes", description: "Create blueprints for objects", content: "class Dog { constructor(name) { this.name = name } bark() { return 'Woof' } }. Create: const dog = new Dog('Buddy')." },
+  { name: "Project: Browser Game", description: "Build an interactive game in the browser!", content: "Combine everything learned to build a game: canvas drawing, click events, game loop, collision detection, scoring." },
 ];
 
 async function getCourses(request: Request, env: Env, origin: string | null): Promise<Response> {
@@ -725,7 +667,10 @@ async function getCourses(request: Request, env: Env, origin: string | null): Pr
   };
   
   return new Response(JSON.stringify(response), {
-    headers: getCorsHeaders(origin),
+    headers: {
+      ...getCorsHeaders(origin),
+      'Content-Type': 'application/json',
+    },
   });
 }
 

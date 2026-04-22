@@ -3,25 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 
-interface ClassItem {
+interface CourseItem {
   name: string;
   description: string;
   content: string;
 }
 
-interface Week {
-  week: number;
-  classes: ClassItem[];
-}
-
-interface Course {
-  week: number;
-  classes: ClassItem[];
-}
-
 export default function CoursesPage() {
   const { user } = useAuth();
-  const [courses, setCourses] = useState<{ python: Course[]; javascript: Course[] } | null>(null);
+  const [courses, setCourses] = useState<{ python: CourseItem[]; javascript: CourseItem[] } | null>(null);
   const [isPaid, setIsPaid] = useState(false);
   const [expandedClass, setExpandedClass] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +20,7 @@ export default function CoursesPage() {
     fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/courses`)
       .then(res => res.json())
       .then(data => {
+        console.log('Courses data:', data);
         setCourses(data.courses);
         setIsPaid(data.isPaid);
       })
@@ -49,37 +40,32 @@ export default function CoursesPage() {
     return (
       <div className="course-section">
         <h2>{lang}</h2>
-        {course.map((week: Week) => (
-          <div key={week.week} className="week-section">
-            <h3>Week {week.week}</h3>
-            <div className="classes-grid">
-              {week.classes.map((cls) => (
-                <div key={cls.name} className="class-card">
-                  <button
-                    className="class-button"
-                    onClick={() => toggleClass(cls.name)}
-                  >
-                    {cls.name}
-                    <span className="expand-icon">{expandedClass === cls.name ? '▲' : '▼'}</span>
-                  </button>
-                  <p className="class-description">{cls.description}</p>
-                  {expandedClass === cls.name && (
-                    <div className="class-content">
-                      {isPaid ? (
-                        <p>{cls.content}</p>
-                      ) : (
-                        <p className="locked-content">
-                          🔒 This content is available for paying students only. 
-                          Contact your teacher to unlock full course access.
-                        </p>
-                      )}
+        <div className="classes-list">
+          {course.map((cls, idx) => (
+            <div key={cls.name} className="class-card">
+              <button
+                className="class-button"
+                onClick={() => toggleClass(cls.name)}
+              >
+                <span className="class-number">{idx + 1}.</span>
+                {cls.name}
+                <span className="expand-icon">{expandedClass === cls.name ? '−' : '+'}</span>
+              </button>
+              <p className="class-description">{cls.description}</p>
+              {expandedClass === cls.name && (
+                <div className="class-content">
+                  {isPaid || user ? (
+                    <div className="content-text">{cls.content}</div>
+                  ) : (
+                    <div className="locked-content">
+                      🔒 This content is available for logged-in students only.
                     </div>
                   )}
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   };
@@ -94,119 +80,108 @@ export default function CoursesPage() {
 
   return (
     <div className="page-container">
-      <style jsx>{`
-        .page-container {
-          max-width: 900px;
-          margin: 0 auto;
-          padding: 20px;
-          font-family: system-ui, sans-serif;
-        }
-        h1 {
-          text-align: center;
-          margin-bottom: 30px;
-        }
-        .course-section {
-          margin-bottom: 40px;
-          padding: 20px;
-          background: #f9f9f9;
-          border-radius: 12px;
-        }
-        .course-section h2 {
-          color: #333;
-          margin-bottom: 20px;
-        }
-        .week-section {
-          margin-bottom: 20px;
-        }
-        .week-section h3 {
-          color: #666;
-          margin-bottom: 10px;
-          padding-left: 10px;
-          border-left: 3px solid #0070f3;
-        }
-        .classes-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .class-card {
-          background: white;
-          border-radius: 8px;
-          overflow: hidden;
-        }
-        .class-button {
-          width: 100%;
-          padding: 15px;
-          background: white;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          cursor: pointer;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 16px;
-          font-weight: 600;
-          text-align: left;
-          transition: background 0.2s;
-        }
-        .class-button:hover {
-          background: #f5f5f5;
-        }
-        .expand-icon {
-          color: #666;
-        }
-        .class-description {
-          padding: 0 15px 15px;
-          margin: 0;
-          color: #666;
-          font-size: 14px;
-        }
-        .class-content {
-          padding: 15px;
-          background: #f0f0f0;
-          border-top: 1px solid #ddd;
-        }
-        .class-content p {
-          margin: 0;
-          line-height: 1.6;
-        }
-        .locked-content {
-          color: #666;
-          font-style: italic;
-          padding: 20px;
-          text-align: center;
-          background: #fff;
-          border-radius: 8px;
-          border: 2px dashed #ccc;
-        }
-        .loading {
-          text-align: center;
-          padding: 40px;
-          color: #666;
-        }
-        .login-prompt {
-          text-align: center;
-          padding: 20px;
-          background: #fff3cd;
-          border-radius: 8px;
-          margin-bottom: 20px;
-        }
-      `}</style>
-
-      <h1>Courses 📚</h1>
+      <h1>Courses</h1>
       
-      {!user && (
-        <div className="login-prompt">
-          👆 Log in to see full course content!
-        </div>
-      )}
-
       {courses && (
         <>
           {renderCourse('python')}
           {renderCourse('javascript')}
         </>
       )}
+
+      <style jsx>{`
+        .page-container {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: #fafafa;
+          min-height: 100vh;
+        }
+        h1 {
+          text-align: center;
+          color: #1a1a1a;
+          margin-bottom: 30px;
+          font-size: 2rem;
+        }
+        .course-section {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 24px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .course-section h2 {
+          color: #333;
+          margin-bottom: 20px;
+          font-size: 1.5rem;
+          border-bottom: 2px solid #eee;
+          padding-bottom: 12px;
+        }
+        .classes-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .class-card {
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid #e5e5e5;
+        }
+        .class-button {
+          width: 100%;
+          padding: 16px 20px;
+          background: #fafafa;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #333;
+          text-align: left;
+          transition: background 0.2s;
+        }
+        .class-button:hover {
+          background: #f0f0f0;
+        }
+        .class-number {
+          color: #666;
+          font-weight: normal;
+          min-width: 24px;
+        }
+        .expand-icon {
+          margin-left: auto;
+          color: #666;
+          font-size: 1.2rem;
+          line-height: 1;
+        }
+        .class-description {
+          padding: 0 20px 16px;
+          margin: 0;
+          color: #666;
+          font-size: 0.9rem;
+        }
+        .class-content {
+          padding: 20px;
+          background: #f5f5f5;
+          border-top: 1px solid #e5e5e5;
+        }
+        .content-text {
+          line-height: 1.7;
+          color: #333;
+        }
+        .locked-content {
+          color: #666;
+          font-style: italic;
+        }
+        .loading {
+          text-align: center;
+          padding: 40px;
+          color: #666;
+        }
+      `}</style>
     </div>
   );
 }
