@@ -21,7 +21,7 @@ function CoursesList() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/courses`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/courses`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         setCourses(data.courses);
