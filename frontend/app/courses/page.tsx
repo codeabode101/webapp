@@ -1,187 +1,70 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/auth';
-
-interface CourseItem {
-  name: string;
-  description: string;
-  content: string;
-}
+import { useState, useEffect } from 'react';
 
 export default function CoursesPage() {
-  const { user } = useAuth();
-  const [courses, setCourses] = useState<{ python: CourseItem[]; javascript: CourseItem[] } | null>(null);
-  const [isPaid, setIsPaid] = useState(false);
-  const [expandedClass, setExpandedClass] = useState<string | null>(null);
+  return (
+    <div className="max-w-2xl mx-auto p-5 bg-gray-50 min-h-screen font-sans">
+      <h1 className="text-2xl text-center mb-8 text-gray-800">Courses</h1>
+      <CoursesList />
+    </div>
+  );
+}
+
+function CoursesList() {
+  const [courses, setCourses] = useState<any>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/courses`)
+    fetch('/api/courses')
       .then(res => res.json())
-      .then(data => {
-        console.log('Courses data:', data);
-        setCourses(data.courses);
-        setIsPaid(data.isPaid);
+      .then(data => setCourses(data.courses))
+      .catch(err => {
+        console.error(err);
+        setError('Failed to load');
       })
-      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const toggleClass = (className: string) => {
-    setExpandedClass(expandedClass === className ? null : className);
-  };
-
-  const renderCourse = (courseKey: 'python' | 'javascript') => {
-    if (!courses || !courses[courseKey]) return null;
-    const course = courses[courseKey];
-    const lang = courseKey === 'python' ? 'Python' : 'JavaScript';
-
-    return (
-      <div className="course-section">
-        <h2>{lang}</h2>
-        <div className="classes-list">
-          {course && course.map((cls: CourseItem, idx: number) => (
-            <div key={cls.name} className="class-card">
-              <button
-                className="class-button"
-                onClick={() => toggleClass(cls.name)}
-              >
-                <span className="class-number">{idx + 1}.</span>
-                {cls.name}
-                <span className="expand-icon">{expandedClass === cls.name ? '−' : '+'}</span>
-              </button>
-              <p className="class-description">{cls.description}</p>
-              {expandedClass === cls.name && (
-                <div className="class-content">
-                  {isPaid || user ? (
-                    <div className="content-text">{cls.content}</div>
-                  ) : (
-                    <div className="locked-content">
-                      🔒 This content is available for logged-in students only.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="page-container">
-        <div className="loading">Loading courses...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="text-center p-10 text-gray-500">Loading...</div>;
+  if (error) return <div className="text-center p-10 text-red-500">{error}</div>;
+  if (!courses) return <div className="text-center p-10 text-gray-500">No courses</div>;
 
   return (
-    <div className="page-container">
-      <h1>Courses</h1>
-      
-      {courses && (
-        <>
-          {renderCourse('python')}
-          {renderCourse('javascript')}
-        </>
-      )}
+    <>
+      <CourseSection title="Python" items={courses.python} expanded={expanded} onToggle={setExpanded} />
+      <CourseSection title="JavaScript" items={courses.javascript} expanded={expanded} onToggle={setExpanded} />
+    </>
+  );
+}
 
-      <style jsx>{`
-        .page-container {
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          background: #fafafa;
-          min-height: 100vh;
-        }
-        h1 {
-          text-align: center;
-          color: #1a1a1a;
-          margin-bottom: 30px;
-          font-size: 2rem;
-        }
-        .course-section {
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          margin-bottom: 24px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        .course-section h2 {
-          color: #333;
-          margin-bottom: 20px;
-          font-size: 1.5rem;
-          border-bottom: 2px solid #eee;
-          padding-bottom: 12px;
-        }
-        .classes-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .class-card {
-          border-radius: 8px;
-          overflow: hidden;
-          border: 1px solid #e5e5e5;
-        }
-        .class-button {
-          width: 100%;
-          padding: 16px 20px;
-          background: #fafafa;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-size: 1rem;
-          font-weight: 600;
-          color: #333;
-          text-align: left;
-          transition: background 0.2s;
-        }
-        .class-button:hover {
-          background: #f0f0f0;
-        }
-        .class-number {
-          color: #666;
-          font-weight: normal;
-          min-width: 24px;
-        }
-        .expand-icon {
-          margin-left: auto;
-          color: #666;
-          font-size: 1.2rem;
-          line-height: 1;
-        }
-        .class-description {
-          padding: 0 20px 16px;
-          margin: 0;
-          color: #666;
-          font-size: 0.9rem;
-        }
-        .class-content {
-          padding: 20px;
-          background: #f5f5f5;
-          border-top: 1px solid #e5e5e5;
-        }
-        .content-text {
-          line-height: 1.7;
-          color: #333;
-        }
-        .locked-content {
-          color: #666;
-          font-style: italic;
-        }
-        .loading {
-          text-align: center;
-          padding: 40px;
-          color: #666;
-        }
-      `}</style>
+function CourseSection({ title, items, expanded, onToggle }: any) {
+  if (!items || !Array.isArray(items)) return null;
+  return (
+    <div className="bg-white rounded-xl p-6 mb-6 shadow-sm">
+      <h2 className="text-xl text-gray-700 mb-5 pb-3 border-b-2 border-gray-200">{title}</h2>
+      <div className="flex flex-col gap-2">
+        {items.map((item: any, idx: number) => (
+          <div key={item.name} className="border border-gray-200 rounded-lg overflow-hidden">
+            <button 
+              className="w-full p-4 bg-gray-50 hover:bg-gray-100 border-none cursor-pointer flex items-center gap-3 text-left font-semibold text-gray-700 transition"
+              onClick={() => onToggle(expanded === item.name ? null : item.name)}
+            >
+              <span className="text-gray-400 font-normal w-6">{idx + 1}.</span>
+              <span className="flex-1">{item.name}</span>
+              <span className="text-gray-400">{expanded === item.name ? '−' : '+'}</span>
+            </button>
+            <p className="px-4 pb-4 text-sm text-gray-500">{item.description}</p>
+            {expanded === item.name && (
+              <div className="p-5 bg-gray-50 border-t border-gray-200">
+                <p className="leading-relaxed text-gray-700">{item.content}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
