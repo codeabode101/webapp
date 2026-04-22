@@ -51,6 +51,44 @@ function CoursesList() {
     <>
       <CourseSection title="Python" items={courses.python} expanded={expanded} onToggle={setExpanded} />
       <CourseSection title="JavaScript" items={courses.javascript} expanded={expanded} onToggle={setExpanded} />
+      
+      <div className="mt-12 p-6 rounded-xl" style={{backgroundColor: 'rgba(106,165,255,0.08)', border: '1px solid rgba(106,165,255,0.15)'}}>
+        <h2 className="text-xl font-bold mb-3" style={{color: '#26dcfc'}}>🎓 CS50's Introduction to Artificial Intelligence</h2>
+        <p className="mb-4 text-sm" style={{color: '#8ea1b8'}}>Free Harvard course - cs50.harvard.edu/ai</p>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
+          <div className="p-3 rounded-lg" style={{backgroundColor: 'rgba(0,0,0,0.2)'}}>
+            <p className="font-bold" style={{color: '#6af5ff'}}>7</p>
+            <p style={{color: '#8ea1b8'}}>Weeks</p>
+          </div>
+          <div className="p-3 rounded-lg" style={{backgroundColor: 'rgba(0,0,0,0.2)'}}>
+            <p className="font-bold" style={{color: '#6af5ff'}}>Free</p>
+            <p style={{color: '#8ea1b8'}}>To audit</p>
+          </div>
+          <div className="p-3 rounded-lg" style={{backgroundColor: 'rgba(0,0,0,0.2)'}}>
+            <p className="font-bold" style={{color: '#6af5ff'}}>Python</p>
+            <p style={{color: '#8ea1b8'}}>Language</p>
+          </div>
+          <div className="p-3 rounded-lg" style={{backgroundColor: 'rgba(0,0,0,0.2)'}}>
+            <p className="font-bold" style={{color: '#6af5ff'}}>edX</p>
+            <p style={{color: '#8ea1b8'}}>Platform</p>
+          </div>
+        </div>
+        
+        <p className="text-sm mb-4" style={{color: '#c8d4e2'}}>
+          Topics: Language, Neural Networks, Learning, Optimization, Uncertainty, Knowledge, Search, LLMs
+        </p>
+        
+        <a 
+          href="https://cs50.harvard.edu/ai" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-block px-5 py-2 rounded-lg font-semibold transition hover:opacity-90"
+          style={{backgroundColor: '#26dcfc', color: '#0a0f1f'}}
+        >
+          Start Learning →
+        </a>
+      </div>
     </>
   );
 }
@@ -64,7 +102,7 @@ function CourseSection({ title, items, expanded, onToggle }: any) {
         {items.map((item: any, idx: number) => (
           <div key={item.name} className="rounded-xl shadow-sm overflow-hidden" style={{backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(106,165,255,0.1)'}}>
             <button 
-              className="w-full p-4 md:p-5 hover:rgba border-none cursor-pointer flex items-center gap-3 md:gap-4 text-left transition"
+              className="w-full p-4 md:p-5 border-none cursor-pointer flex items-center gap-3 md:gap-4 text-left transition"
               style={{backgroundColor: 'transparent'}}
               onClick={() => onToggle(expanded === item.name ? null : item.name)}
             >
