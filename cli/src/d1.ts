@@ -181,7 +181,7 @@ export async function getStudent(id: number): Promise<Student | null> {
 
 export async function getStudentClasses(studentId: number): Promise<StudentClass[]> {
   return d1Query<StudentClass>(
-    `SELECT class_id, student_id, status, name, class_type, class_date, accomplished, methods, stretch_methods, description, classwork, notes, hw, hw_notes, taught_methods, needs_practice
+    `SELECT class_id, student_id, status, name, class_type, class_date, accomplished, methods, stretch_methods, description, classwork, notes, hw, hw_notes, taught_methods, needs_practice, parent_note
      FROM students_classes WHERE student_id = ${studentId} ORDER BY class_id DESC`
   );
 }
@@ -298,26 +298,27 @@ export async function updateGeneratedClasswork(
 export async function updateClass(
   classId: number,
   data: {
-    name?: string;
-    class_type?: string;
-    class_date?: string;
-    accomplished?: string;
-    methods?: string;
-    stretch_methods?: string;
-    description?: string;
-    classwork?: string;
-    notes?: string;
-    hw?: string;
-    hw_notes?: string;
-    status?: string;
-    taught_methods?: string;
-    needs_practice?: string;
+    name?: string | null;
+    class_type?: string | null;
+    class_date?: string | null;
+    accomplished?: string | null;
+    methods?: string | null;
+    stretch_methods?: string | null;
+    description?: string | null;
+    classwork?: string | null;
+    notes?: string | null;
+    hw?: string | null;
+    hw_notes?: string | null;
+    status?: string | null;
+    taught_methods?: string | null;
+    needs_practice?: string | null;
+    parent_note?: string | null;
   }
 ): Promise<void> {
   const sets: string[] = [];
   const values: string[] = [];
 
-  if (data.name !== undefined) {
+  if (data.name !== undefined && data.name !== null) {
     sets.push(`name = '${data.name.replace(/'/g, "''")}'`);
   }
   if (data.class_type !== undefined) {
@@ -335,29 +336,32 @@ export async function updateClass(
   if (data.stretch_methods !== undefined) {
     sets.push(`stretch_methods = '${data.stretch_methods}'`);
   }
-  if (data.description !== undefined) {
+  if (data.description !== undefined && data.description !== null) {
     sets.push(`description = '${data.description.replace(/'/g, "''")}'`);
   }
-  if (data.classwork !== undefined) {
+  if (data.classwork !== undefined && data.classwork !== null) {
     sets.push(`classwork = '${data.classwork.replace(/'/g, "''")}'`);
   }
-  if (data.notes !== undefined) {
+  if (data.notes !== undefined && data.notes !== null) {
     sets.push(`notes = '${data.notes.replace(/'/g, "''")}'`);
   }
-  if (data.hw !== undefined) {
+  if (data.hw !== undefined && data.hw !== null) {
     sets.push(`hw = '${data.hw.replace(/'/g, "''")}'`);
   }
-  if (data.hw_notes !== undefined) {
+  if (data.hw_notes !== undefined && data.hw_notes !== null) {
     sets.push(`hw_notes = '${data.hw_notes.replace(/'/g, "''")}'`);
   }
   if (data.status !== undefined) {
     sets.push(`status = '${data.status}'`);
   }
-  if (data.taught_methods !== undefined) {
+  if (data.taught_methods !== undefined && data.taught_methods !== null) {
     sets.push(`taught_methods = '${data.taught_methods.replace(/'/g, "''")}'`);
   }
-  if (data.needs_practice !== undefined) {
+  if (data.needs_practice !== undefined && data.needs_practice !== null) {
     sets.push(`needs_practice = '${data.needs_practice.replace(/'/g, "''")}'`);
+  }
+  if (data.parent_note !== undefined && data.parent_note !== null) {
+    sets.push(`parent_note = '${data.parent_note.replace(/'/g, "''")}'`);
   }
 
   if (sets.length === 0) return;

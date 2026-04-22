@@ -32,6 +32,7 @@ export interface StudentClass {
   homework_submission?: string | null;
   taught_methods?: string | null;
   needs_practice?: string | null;
+  parent_note?: string | null;
 }
 
 export type ClassType = "traditional" | "experimental" | "self_directed";

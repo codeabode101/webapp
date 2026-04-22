@@ -465,7 +465,7 @@ async function handleStep2(
     default: true,
   });
 
-  let analysis = { notes: "", taught_methods: "", needs_practice: "" };
+  let analysis = { notes: "", taught_methods: "", needs_practice: "", parent_note: "" };
   if (useAI) {
     const spinner = ora("Analyzing...").start();
     try {
@@ -477,16 +477,17 @@ async function handleStep2(
         classNotes
       );
       spinner.stop();
-      console.log(`\nTaught: ${analysis.taught_methods}`);
-      console.log(`Needs practice: ${analysis.needs_practice}`);
-      console.log(`Notes: ${analysis.notes}`);
+      console.log(`\nTaught: ${analysis.taught_methods || ""}`);
+      console.log(`Needs practice: ${analysis.needs_practice || ""}`);
+      console.log(`Notes: ${analysis.notes || ""}`);
+      console.log(`Parent note: ${analysis.parent_note || ""}`);
     } catch (error) {
       spinner.fail("Failed");
       printError(error instanceof Error ? error.message : String(error));
     }
   }
 
-  // 3. Save analysis
+  // 3. Save analysis (includes AI-generated parent note)
   const { saveAnalysis } = await inquirer.prompt({
     type: "confirm",
     name: "saveAnalysis",
@@ -495,9 +496,10 @@ async function handleStep2(
   });
   if (saveAnalysis) {
     await updateClass(currentClass.class_id, {
-      notes: analysis.notes,
-      taught_methods: analysis.taught_methods,
-      needs_practice: analysis.needs_practice,
+      notes: analysis.notes || null,
+      taught_methods: analysis.taught_methods || null,
+      needs_practice: analysis.needs_practice || null,
+      parent_note: analysis.parent_note || null,
     });
   }
 

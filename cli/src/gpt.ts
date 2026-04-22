@@ -258,6 +258,7 @@ export interface CompletedClass {
   notes: string;
   taught_methods: string;
   needs_practice: string;
+  parent_note: string;
 }
 
 export async function analyzeClass(
@@ -277,7 +278,8 @@ Analyze the class and output what was actually taught:
 {
   "notes": "teaching tips",
   "taught_methods": "comma-separated methods actually taught",
-  "needs_practice": "concepts needing practice"
+  "needs_practice": "concepts needing practice",
+  "parent_note": "2-line personal update for parents (what went well + 1 thing to work on), conversational tone like you're texting the parent
 }`;
 
   const userMessage = `
