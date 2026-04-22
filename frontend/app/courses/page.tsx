@@ -51,13 +51,7 @@ function CoursesList() {
     <>
       <CourseSection title="Python" items={courses.python} expanded={expanded} onToggle={setExpanded} />
       <CourseSection title="JavaScript" items={courses.javascript} expanded={expanded} onToggle={setExpanded} />
-      
-      <div className="mt-12 p-6 rounded-xl" style={{backgroundColor: 'rgba(106,165,255,0.08)', border: '1px solid rgba(106,165,255,0.15)'}}>
-        <h2 className="text-xl font-bold mb-3" style={{color: '#26dcfc'}}>🎓 AI (Coming Soon)</h2>
-        <p className="text-sm mb-4" style={{color: '#8ea1b8'}}>
-          Learn Artificial Intelligence with Python - coming to Codeabode soon!
-        </p>
-      </div>
+      <CourseSection title="AI" items={courses.ai} expanded={expanded} onToggle={setExpanded} />
     </>
   );
 }

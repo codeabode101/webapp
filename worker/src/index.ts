@@ -652,6 +652,17 @@ const JAVASCRIPT_COURSE = [
   { name: "Project: Browser Game", description: "Build an interactive browser game!", content: "In this project, you'll build a game that runs in the browser.\n\n\nYou'll use:\n- Variables to track score, lives, game state\n- Conditionals for win/lose conditions\n- Loops for game animation\n- Functions for game logic\n- Event listeners for controls\n- Canvas for drawing graphics\n\nExample features:\n- A character that moves with arrow keys\n- Collectible items that add points\n- Obstacles to avoid\n- A score display\n- Win/lose screens" },
 ];
 
+const AI_COURSE = [
+  { name: "Search", description: "Find paths in graphs and puzzles", content: "Search algorithms help AI find solutions in problem spaces.\n\nBreadth-First Search (BFS): explores all neighbors first, guaranteed to find shortest path.\n\nDepth-First Search (DFS): explores as far as possible before backtracking.\n\nA* Search: uses heuristics to find optimal paths faster.\n\nExample: navigating a maze, finding shortest route on a map." },
+  { name: "Knowledge", description: "Represent and reason with facts", content: "Knowledge representation lets AI store and use facts.\n\nPropositional Logic: true/false statements.\n\nFirst-Order Logic: rules like 'all humans are mortal'.\n\nInference: drawing conclusions from known facts.\n\nExample: a medical diagnosis system that knows symptoms and diseases." },
+  { name: "Uncertainty", description: "Deal with incomplete information", content: "Probabilistic reasoning helps AI handle uncertainty.\n\nBayes' Theorem: P(A|B) = P(B|A) * P(A) / P(B)\n\nBayesian Networks: model relationships between variables.\n\nExample: spam filters that calculate probability an email is spam." },
+  { name: "Optimization", description: "Find the best solution among many", content: "Optimization algorithms find the best solution when there are many choices.\n\nLocal Search: hill climbing, simulated annealing.\n\nGenetic Algorithms: evolve solutions over generations.\n\nExample: scheduling, route planning, resource allocation." },
+  { name: "Learning", description: "Learn patterns from data", content: "Machine learning lets AI improve from experience.\n\nSupervised Learning: learn from labeled examples.\n\nUnsupervised Learning: find patterns in unlabeled data.\n\nReinforcement Learning: learn from rewards and penalties.\n\nExample: predicting house prices, recommending movies." },
+  { name: "Neural Networks", description: "Model the brain's structure", content: "Neural networks are inspired by biological neurons.\n\nLayers: input, hidden layers, output.\n\nTraining: adjust weights to minimize error.\n\nBackpropagation: algorithm for learning.\n\nExample: image recognition, speech synthesis." },
+  { name: "Language", description: "Understand and generate text", content: "Natural Language Processing helps AI work with human language.\n\nTokenization: breaking text into words.\n\nEmbeddings: representing words as numbers.\n\nTransformers: attention mechanisms for context.\n\nExample: chatbots, translation, sentiment analysis." },
+  { name: "Project: AI Game", description: "Build an AI-powered game!", content: "In this project, you'll build a game with AI opponents.\n\nYou'll use:\n- Minimax algorithm for game AI\n- Alpha-beta pruning to optimize\n- Evaluation functions\n- Machine learning for smarter opponents\n\nExample features:\n- Tic-tac-toe with unbeatable AI\n- Connect Four with varying difficulty\n- Chess or checkers AI" },
+];
+
 async function getCourses(request: Request, env: Env, origin: string | null): Promise<Response> {
   const user = await getUserFromRequest(request, env);
   const isPaid = user !== null;
@@ -659,6 +670,7 @@ async function getCourses(request: Request, env: Env, origin: string | null): Pr
   const courses = {
     python: PYTHON_COURSE,
     javascript: JAVASCRIPT_COURSE,
+    ai: AI_COURSE,
   };
   
   const response = {
