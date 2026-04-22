@@ -15,6 +15,7 @@ export default function CoursesPage() {
 
 function CoursesList() {
   const [courses, setCourses] = useState<any>(null);
+  const [isPaid, setIsPaid] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,10 @@ function CoursesList() {
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/courses`)
       .then(res => res.json())
-      .then(data => setCourses(data.courses))
+      .then(data => {
+        setCourses(data.courses);
+        setIsPaid(data.isPaid);
+      })
       .catch(err => {
         console.error(err);
         setError('Failed to load');
@@ -33,6 +37,15 @@ function CoursesList() {
   if (loading) return <div className="text-center p-10" style={{color: '#8ea1b8'}}>Loading...</div>;
   if (error) return <div className="text-center p-10" style={{color: '#ff6a6a'}}>{error}</div>;
   if (!courses) return <div className="text-center p-10" style={{color: '#8ea1b8'}}>No courses</div>;
+
+  if (!isPaid) {
+    return (
+      <div className="text-center p-8 rounded-xl" style={{backgroundColor: 'rgba(255,165,0,0.1)', border: '1px solid rgba(255,165,0,0.2)'}}>
+        <p style={{color: '#ffcc66'}} className="text-lg mb-2">🔒 Login required</p>
+        <p style={{color: '#8ea1b8'}}>Please log in to access course content.</p>
+      </div>
+    );
+  }
 
   return (
     <>
