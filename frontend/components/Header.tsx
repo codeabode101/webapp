@@ -27,6 +27,7 @@ export default function Header() {
 
       <div className="flex items-center gap-1">
         <Link href="/projects" className="nav-link"><strong>Projects</strong></Link>
+        <Link href="/courses" className="nav-link"><strong>Courses</strong></Link>
         <Link href="/forum" className="nav-link"><strong>Forum</strong></Link>
         {user && (
           <button

@@ -624,6 +624,111 @@ async function incrementProjectView(env: Env, id: number, origin: string | null)
   return new Response(JSON.stringify('OK'), { headers: getCorsHeaders(origin) });
 }
 
+const PYTHON_COURSE = [
+  { week: 1, classes: [
+    { name: "1.1 Introduction to Python & Print", description: "Learn what Python is, how to run code, and your first function: print()", content: "Students learn the basics of Python programming including how to set up their environment, what programming is, and write their first program using print() to display output." },
+    { name: "1.2 Variables & User Input", description: "Store data with variables and get input with input()", content: "Students learn to store data in variables, understand different data types (strings, numbers), and use input() to interact with users." },
+  ]},
+  { week: 2, classes: [
+    { name: "2.1 Math Operations", description: "Perform calculations with Python", content: "Learn arithmetic operators (+, -, *, /), order of operations, and using math in programs." },
+    { name: "2.2 String Formatting", description: "Combine strings and numbers elegantly", content: "Learn f-strings, string concatenation, and how to format output nicely." },
+  ]},
+  { week: 3, classes: [
+    { name: "3.1 Conditionals (if/else)", description: "Make decisions in code", content: "Learn if/elif/else statements, comparison operators, and making programs that make decisions." },
+    { name: "3.2 Boolean Logic", description: "Combine conditions with and/or/not", content: "Learn boolean operators, truth tables, and complex conditionals." },
+  ]},
+  { week: 4, classes: [
+    { name: "4.1 While Loops", description: "Repeat code with while loops", content: "Learn while loops, infinite loops, loop control with break and continue." },
+    { name: "4.2 For Loops", description: "Iterate with for loops", content: "Learn for loops, range(), and iterating over sequences." },
+  ]},
+  { week: 5, classes: [
+    { name: "5.1 Lists", description: "Store multiple values in lists", content: "Learn list creation, indexing, slicing, and basic list operations." },
+    { name: "5.2 List Methods", description: "Modify lists with built-in methods", content: "Learn append, remove, pop, and other list methods." },
+  ]},
+  { week: 6, classes: [
+    { name: "6.1 Functions", description: "Create reusable code blocks", content: "Learn function definition, parameters, return values, and calling functions." },
+    { name: "6.2 Scope", description: "Understand variable scope", content: "Learn local vs global scope, and when to use which." },
+  ]},
+  { week: 7, classes: [
+    { name: "7.1 Project: Number Guessing Game", description: "Build your first game!", content: "Create a number guessing game using all concepts learned so far - conditionals, loops, random numbers, and functions." },
+    { name: "7.2 Project Enhancements", description: "Add features to your game", content: "Add lives, hints, difficulty levels, and replay functionality." },
+  ]},
+  { week: 8, classes: [
+    { name: "8.1 Dictionaries", description: "Store key-value pairs", content: "Learn dictionary creation, accessing values, adding/removing keys." },
+    { name: "8.2 Nested Data", description: "Complex data structures", content: "Learn nested dictionaries and lists within dictionaries." },
+  ]},
+  { week: 9, classes: [
+    { name: "9.1 File Reading", description: "Read from files", content: "Learn to open, read, and process files in Python." },
+    { name: "9.2 File Writing", description: "Write to files", content: "Learn to write and append to files." },
+  ]},
+  { week: 10, classes: [
+    { name: "10.1 Final Project Planning", description: "Plan your final game", content: "Design and plan a more complex game using all learned concepts." },
+    { name: "10.2 Final Project", description: "Build your final game!", content: "Build a complete game with menus, scoring, file saving/loading." },
+  ]},
+];
+
+const JAVASCRIPT_COURSE = [
+  { week: 1, classes: [
+    { name: "1.1 Intro to JS & Console", description: "Learn JavaScript basics and console.log()", content: "Introduction to JavaScript in the browser, using console.log() for debugging." },
+    { name: "1.2 Variables & Data Types", description: "Declare variables with let/const", content: "Learn let, const, strings, numbers, and booleans." },
+  ]},
+  { week: 2, classes: [
+    { name: "2.1 DOM Manipulation", description: "Change page content", content: "Learn document.getElementById, innerText, and textContent." },
+    { name: "2.2 Event Listeners", description: "Respond to user clicks", content: "Learn addEventListener and handling click events." },
+  ]},
+  { week: 3, classes: [
+    { name: "3.1 Conditionals", description: "if/else in JavaScript", content: "Learn conditional logic in JS." },
+    { name: "3.2 Comparison Operators", description: "Compare values", content: "Learn ===, !==, <, >, &&, ||" },
+  ]},
+  { week: 4, classes: [
+    { name: "4.1 Loops", description: "for and while loops", content: "Learn to repeat code with loops." },
+    { name: "4.2 Array Methods", description: "map, filter, reduce", content: "Learn functional array methods." },
+  ]},
+  { week: 5, classes: [
+    { name: "5.1 Functions", description: "Create reusable code", content: "Learn function declaration and arrow functions." },
+    { name: "5.2 Project: Clicker Game", description: "Build a clicker game", content: "Create a simple clicker game with DOM manipulation." },
+  ]},
+  { week: 6, classes: [
+    { name: "6.1 LocalStorage", description: "Save data in browser", content: "Learn to persist data with localStorage." },
+    { name: "6.2 Project: Todo List", description: "Build a todo app", content: "Create a todo list that saves to localStorage." },
+  ]},
+  { week: 7, classes: [
+    { name: "7.1 Canvas API", description: "Draw graphics", content: "Learn HTML5 Canvas for custom graphics." },
+    { name: "7.2 Animation", description: "Animate on canvas", content: "Learn requestAnimationFrame for smooth animation." },
+  ]},
+  { week: 8, classes: [
+    { name: "8.1 Game Loop", description: "Core game loop", content: "Learn proper game loop architecture." },
+    { name: "8.2 Collision Detection", description: "Detect object collisions", content: "Learn basic collision detection." },
+  ]},
+  { week: 9, classes: [
+    { name: "9.1 Sprite Animation", description: "Animated sprites", content: "Learn sprite sheet animation." },
+    { name: "9.2 Sound", description: "Add audio to games", content: "Learn Web Audio API basics." },
+  ]},
+  { week: 10, classes: [
+    { name: "10.1 Final Project", description: "Build your JS game!", content: "Create a complete browser game." },
+    { name: "10.2 Polish & Deploy", description: "Finish and share", content: "Polish, test, and deploy your game." },
+  ]},
+];
+
+async function getCourses(request: Request, env: Env, origin: string | null): Promise<Response> {
+  const user = await getUserFromRequest(request, env);
+  const isPaid = user !== null;
+  
+  const courses = {
+    python: PYTHON_COURSE,
+    javascript: JAVASCRIPT_COURSE,
+  };
+  
+  const response = {
+    courses,
+    isPaid,
+  };
+  
+  return new Response(JSON.stringify(response), {
+    headers: getCorsHeaders(origin),
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -691,11 +796,15 @@ export default {
         return await updateProjectStatus(env, id, request, origin);
       }
       
-      if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {
+if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {
         const id = parseInt(path.split('/')[3]);
         return await incrementProjectView(env, id, origin);
       }
-      
+
+      if (path === '/api/courses' && request.method === 'GET') {
+        return await getCourses(request, env, origin);
+      }
+
       // Proxy static files from build server (same-origin workaround)
       if (path.startsWith('/static/projects/')) {
         const buildUrl = `https://iloveuvania.omraheja.me${path}`;
