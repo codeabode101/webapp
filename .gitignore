@@ -15,6 +15,7 @@ frontend/tsconfig.tsbuildinfo
 .env
 .env.local
 **/.env.local
+**/.env
 
 # Python
 venv/
