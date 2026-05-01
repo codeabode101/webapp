@@ -7,8 +7,8 @@ import {
   StudentClass,
 } from "./types.js";
 
-const API_URL = "https://ai.hackclub.com/proxy/v1/chat/completions";
-const MODEL = "claude-sonnet-4-20250514";
+const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "llama-3.1-8b-instant";
 
 const CLASSNOTES_PROMPT = `You are a coding classwork generator. Create a step-by-step guide for students.
 - Be concise and kid-friendly
@@ -74,12 +74,12 @@ export async function generateClasswork(
   level?: string,
   notes?: string
 ): Promise<GeneratedClasswork> {
-  const apiKey = env.HACKCLUB_API_KEY;
+  const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error("HACKCLUB_API_KEY not set in environment");
+    throw new Error("GROQ_API_KEY not set in environment");
   }
 
-  const prompt = `You are a coding tutor. Generate a classwork assignment and homework for a student learning to code.
+  const prompt = `json - You are a coding tutor. Generate a classwork assignment and homework for a student learning to code.
 
 ## Student Context
 - **Methods to practice**: ${methods || "none specified"}
@@ -181,9 +181,9 @@ export async function generateCurriculum(
   notes: string,
   classes: StudentClass[]
 ): Promise<Curriculum> {
-  const apiKey = env.HACKCLUB_API_KEY;
+  const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error("HACKCLUB_API_KEY not set in environment");
+    throw new Error("GROQ_API_KEY not set in environment");
   }
 
   const systemPrompt = `### Curriculum Agent System Prompt  
@@ -213,8 +213,7 @@ Return ONLY valid JSON:
     classHistory += `\nClass: ${c.name}\nMethods: ${c.methods}\nDescription: ${c.description}\n`;
   }
 
-  const userMessage = `
-Age: (ask if needed)
+  const userMessage = `json - Age: (ask if needed)
 Current Level: ${currentLevel}
 Final Goal: ${finalGoal}
 Notes: ${notes}
@@ -268,9 +267,9 @@ export async function analyzeClass(
   classwork: string,
   teacherNotes: string
 ): Promise<CompletedClass> {
-  const apiKey = env.HACKCLUB_API_KEY;
+  const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error("HACKCLUB_API_KEY not set in environment");
+    throw new Error("GROQ_API_KEY not set in environment");
   }
 
   const systemPrompt = `## Class Analysis
@@ -282,8 +281,7 @@ Analyze the class and output what was actually taught:
   "parent_note": "2-line personal update for parents (what went well + 1 thing to work on), conversational tone like you're texting the parent
 }`;
 
-  const userMessage = `
-Student Level: ${currentLevel}
+  const userMessage = `json - Student Level: ${currentLevel}
 Class: ${description}
 Methods (planned): ${methods}
 Classwork: ${classwork}
@@ -329,9 +327,9 @@ export async function generateHomework(
   taughtMethods: string,
   needsPractice: string
 ): Promise<{ hw: string; notes: string }> {
-  const apiKey = env.HACKCLUB_API_KEY;
+  const apiKey = env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error("HACKCLUB_API_KEY not set in environment");
+    throw new Error("GROQ_API_KEY not set in environment");
   }
 
   const systemPrompt = `## Homework Generator
@@ -341,8 +339,7 @@ Generate homework based on what was taught:
   "notes": "teaching tips"
 }`;
 
-  const userMessage = `
-Student Level: ${currentLevel}
+  const userMessage = `json - Student Level: ${currentLevel}
 Class: ${description}
 Methods (planned): ${methods}
 What was actually taught: ${taughtMethods}

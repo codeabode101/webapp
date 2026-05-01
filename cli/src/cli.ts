@@ -282,12 +282,124 @@ export async function runContinue(): Promise<void> {
 
   console.log(`Completed (${completed.length}):`);
   for (const c of completed.slice(0, 3)) {
-    console.log(`  - ${c.name}`);
+    const hasFeedback = c.hw_notes ? " ✓" : " ○";
+    console.log(`  - ${c.name}${hasFeedback}`);
   }
   if (completed.length > 3) {
     console.log(`  ... and ${completed.length - 3} more`);
   }
   console.log();
+
+  // Check if there's a completed class without hw feedback
+  const pendingFeedback = completed.find(c => !c.hw_notes);
+  if (pendingFeedback) {
+    console.log(`→ ${pendingFeedback.name} has no feedback yet`);
+    const { addFeedback } = await inquirer.prompt({
+      type: "confirm",
+      name: "addFeedback",
+      message: "Add homework feedback?",
+      default: true,
+    });
+    if (addFeedback) {
+      const { feedback } = await inquirer.prompt({
+        type: "editor",
+        name: "feedback",
+        message: "Feedback on completed hw:",
+      });
+      await updateClass(pendingFeedback.class_id, { hw_notes: feedback || null });
+      console.log("✓ Feedback saved!\n");
+
+      // After feedback, regenerate or create exploration class
+      const { planChoice } = await inquirer.prompt({
+        type: "list",
+        name: "planChoice",
+        message: "Plan next class:",
+        choices: [
+          { name: "Plan with AI", value: "plan" },
+          { name: "One exploration class", value: "exploration" },
+        ],
+      });
+
+      if (planChoice === "plan") {
+        // ... generate curriculum
+        const allClasses = await getStudentClasses(studentId);
+        const curSpinner = ora("Generating...").start();
+        let curriculum;
+        try {
+          curriculum = await generateCurriculum(
+            student.current_level || "",
+            student.final_goal || "",
+            student.notes || "",
+            allClasses
+          );
+          curSpinner.stop();
+        } catch (error) {
+          curSpinner.fail("Failed");
+          console.error(error instanceof Error ? error.message : String(error));
+          return;
+        }
+
+        console.log(`\nGenerated ${curriculum.classes.length} classes`);
+        const { save } = await inquirer.prompt({
+          type: "confirm",
+          name: "save",
+          message: "Save?",
+          default: true,
+        });
+
+        if (save) {
+          let lowestId = 0;
+          for (const c of curriculum.classes) {
+            const methodsStr = Array.isArray(c.methods) ? c.methods.join(", ") : (c.methods || "");
+            const stretchStr = Array.isArray(c.stretch_methods) ? c.stretch_methods.join(", ") : (c.stretch_methods || "");
+            const id = await createClass(
+              studentId,
+              c.name,
+              "",
+              "",
+              methodsStr,
+              stretchStr,
+              c.description || "",
+              "upcoming"
+            );
+            if (!lowestId || id < lowestId) lowestId = id;
+          }
+
+          await updateStudentInfo(studentId, {
+            current_level: curriculum.current_level,
+            final_goal: curriculum.final_goal,
+            notes: curriculum.notes,
+            current_class: lowestId,
+            step: 1,
+          });
+          console.log("Saved!\n");
+        }
+      } else {
+        // Exploration class - ask for name
+        const { name } = await inquirer.prompt({
+          type: "input",
+          name: "name",
+          message: "Exploration class name:",
+          default: `Exploration ${new Date().toISOString().split("T")[0]}`,
+        });
+        const id = await createClass(
+          studentId,
+          name,
+          "",
+          "",
+          "",
+          "",
+          "Student-led exploration",
+          "upcoming"
+        );
+        await updateStudentInfo(studentId, { current_class: id, step: 1 });
+        console.log("Created exploration class.\n");
+      }
+
+      console.log("✓ Done!\n");
+      return;
+    }
+  }
 
   const step = student.step || 1;
 
@@ -503,8 +615,8 @@ async function handleStep2(
     });
   }
 
-  // 4. Ask about homework - now go back to hw flow
-  await runHomeworkFlow(studentId, student, currentClass);
+  // 4. Proceed to finish
+  await finishClassAndRegenerate(studentId, student, currentClass);
 }
 
 async function runHomeworkFlow(
@@ -641,7 +753,6 @@ async function finishClassAndRegenerate(
     // Mark completed
     await updateClass(currentClass.class_id, {
       status: "completed",
-      hw_notes: "saved in prev step",
     });
 
     // Delete all upcoming

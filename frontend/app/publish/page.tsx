@@ -45,7 +45,7 @@ function PublishContent() {
           work_type: workType === 'cw' ? 'classwork' : 'homework',
           title: title.trim(),
           description: description.trim(),
-          deploy_method: 'pygbag',
+          deploy_method: 'teavm',
         }),
       });
       if (!res.ok) {
