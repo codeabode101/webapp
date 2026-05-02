@@ -172,6 +172,83 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            if self.path == "/upload-jar":
+                # Upload Java jar file
+                build_key = self.headers.get('X-Build-Key')
+                if build_key != 'codeabode-build-secret-2026':
+                    self.send_response(401)
+                    self.end_headers()
+                    self.wfile.write(b'Unauthorized')
+                    return
+                
+                # Parse multipart form data
+                content_type = self.headers.get('Content-Type', '')
+                if 'multipart/form-data' not in content_type:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'Expected multipart/form-data')
+                    return
+                
+                # Get boundary
+                boundary = None
+                for part in content_type.split(';'):
+                    if 'boundary=' in part:
+                        boundary = part.split('=')[1].strip().encode()
+                        break
+                
+                if not boundary:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'Missing boundary')
+                    return
+                
+                length = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(length)
+                
+                # Simple multipart parser for jar file
+                jar_data = None
+                project_id = None
+                
+                # Split by boundary
+                parts = body.split(b'--' + boundary)
+                for part in parts:
+                    if b'filename=' in part and b'.jar' in part:
+                        # Extract jar file data
+                        header_end = part.find(b'\r\n\r\n')
+                        if header_end != -1:
+                            jar_data = part[header_end + 4:]
+                            # Remove trailing boundary
+                            jar_data = jar_data.rstrip(b'\r\n--')
+                    
+                    if b'name="project_id"' in part:
+                        header_end = part.find(b'\r\n\r\n')
+                        if header_end != -1:
+                            value_end = part.find(b'\r\n', header_end + 4)
+                            if value_end != -1:
+                                project_id = part[header_end + 4:value_end].decode()
+                
+                if not jar_data or not project_id:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'Missing jar file or project_id')
+                    return
+                
+                # Save jar file
+                jar_dir = "/var/www/games/jars"
+                os.makedirs(jar_dir, exist_ok=True)
+                jar_path = os.path.join(jar_dir, f"{project_id}.jar")
+                
+                with open(jar_path, 'wb') as f:
+                    f.write(jar_data)
+                
+                print(f"Jar uploaded: {jar_path}")
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "path": jar_path}).encode())
+                return
+            
             if self.path == "/build":
                 length = int(self.headers.get('Content-Length', 0))
                 body = self.rfile.read(length)

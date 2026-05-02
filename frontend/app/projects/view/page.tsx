@@ -4,19 +4,57 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useHeader } from '@/lib/header-context';
-import { useAuth } from '@/lib/auth';
 import { useProject } from '@/lib/project-context';
+
+type Project = {
+  id: number;
+  status: string;
+  deploy_method?: string;
+  title: string;
+  author_name?: string;
+  views: number;
+  description: string;
+  url?: string;
+};
 
 function ProjectContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
   const statusParam = searchParams.get('status');
-  const { user } = useAuth();
   const { setParentPath } = useHeader();
   const { getProject } = useProject();
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const showBuilding = statusParam === 'pending' || project?.status === 'pending' || project?.status === 'building';
+  const isJava = project?.deploy_method === 'java';
+
+  // Load CheerpJ for Java projects (must be before early returns)
+  useEffect(() => {
+    if (isJava && project?.status === 'ready') {
+      const script = document.createElement('script');
+      script.src = 'https://cjrtnc.leaningtech.com/4.3/loader.js';
+      script.onload = async () => {
+        try {
+          // @ts-expect-error CheerpJ is loaded globally
+          await cheerpjInit({ version: 17 });
+          const display = document.getElementById('cheerpj-display');
+          if (display) {
+            // @ts-expect-error CheerpJ types not installed
+            cheerpjCreateDisplay(800, 600, display);
+          }
+          // @ts-expect-error CheerpJ types not installed
+          await cheerpjRunJar(`/app/${project.id}.jar`);
+        } catch (e) {
+          console.error('CheerpJ init failed:', e);
+          setError('Failed to load Java game');
+        }
+      };
+      script.onerror = () => setError('Failed to load CheerpJ');
+      document.body.appendChild(script);
+      return () => { document.body.removeChild(script); };
+    }
+  }, [isJava, project?.status, project?.id]);
 
   useEffect(() => {
     setParentPath('/projects');
@@ -37,12 +75,10 @@ function ProjectContent() {
     // Fallback: fetch all projects (or a single project endpoint)
     fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/projects`, { credentials: 'include' })
       .then(res => res.json())
-      .then((allProjects) => {
-        const found = allProjects.find((p: any) => p.id === idNum);
+      .then((allProjects: Project[]) => {
+        const found = allProjects.find(p => p.id === idNum);
         if (found) {
           setProject(found);
-          // Optionally add to cache via a separate `addProject` function
-          // (We'll need to expose addProject from context for this)
         } else {
           setError('Project not found');
         }
@@ -63,8 +99,6 @@ function ProjectContent() {
   if (error) return <div className="p-8 text-center text-red-400">Error: {error}</div>;
   if (!project) return <div className="p-8 text-center">Project not found</div>;
 
-  const showBuilding = statusParam === 'pending' || project.status === 'pending' || project.status === 'building';
-
   return (
     <div className="main-app">
       <h1 className="text-2xl text-[var(--accent)] mb-2">{project.title}</h1>
@@ -74,15 +108,25 @@ function ProjectContent() {
       <p className="mb-4">{project.description}</p>
 
 {project.status === 'ready' ? (
-        <div className="border border-[var(--border)] rounded overflow-hidden aspect-video">
-          <iframe
-            src={project.url}
-            className="w-full h-full"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
-            title={project.title}
-            onError={() => setError('Game not loaded - may need rebuild')}
-          />
-        </div>
+        isJava ? (
+          <div className="border border-[var(--border)] rounded overflow-hidden aspect-video flex items-center justify-center">
+            {error ? (
+              <p className="text-red-400">{error}</p>
+            ) : (
+              <div id="cheerpj-display" className="w-[800px] h-[600px]" />
+            )}
+          </div>
+        ) : (
+          <div className="border border-[var(--border)] rounded overflow-hidden aspect-video">
+            <iframe
+              src={project.url}
+              className="w-full h-full"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+              title={project.title}
+              onError={() => setError('Game not loaded - may need rebuild')}
+            />
+          </div>
+        )
       ) : showBuilding ? (
         <div className="p-8 text-center border border-[var(--border)] rounded">
           <p className="text-lg">⏳ Your project is being built...</p>

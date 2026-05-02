@@ -138,7 +138,7 @@ function getCorsHeaders(origin: string | null) {
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Build-Key',
     'Access-Control-Allow-Credentials': 'true',
-    'Content-Security-Policy': "worker-src 'self' blob: https://cjrtnc.leaningtech.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cjrtnc.leaningtech.com; connect-src 'self' https://cjrtnc.leaningtech.com blob: data:; default-src 'self' blob: data:;",
+    'Content-Security-Policy': "worker-src 'self' blob: https://cjrtnc.leaningtech.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cjrtnc.leaningtech.com; connect-src 'self' https://cjrtnc.leaningtech.com blob: data:; default-src 'self' blob: data:; object-src 'self' https://*.r2.dev;",
   };
 }
 
@@ -430,61 +430,183 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
   if (!user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
-  
+
+  const contentType = request.headers.get('Content-Type') || '';
+
+  // Handle Java jar upload (multipart/form-data)
+  if (contentType.includes('multipart/form-data')) {
+    const form = await request.formData();
+    const title = form.get('title') as string;
+    const description = form.get('description') as string;
+    const jarFile = form.get('jar') as File;
+
+    if (!title || !jarFile) {
+      return new Response(JSON.stringify({ error: 'Missing title or jar file' }), { status: 400 });
+    }
+    if (!jarFile.name.endsWith('.jar')) {
+      return new Response(JSON.stringify({ error: 'File must be a .jar' }), { status: 400 });
+    }
+
+    // Insert Java project
+    await env.DB.prepare(`
+      INSERT INTO projects (account_id, title, description, deploy_method, status)
+      VALUES (?, ?, ?, 'java', 'ready')
+    `).bind(user.userId, title, description).run();
+
+    // Get last insert ID reliably
+    const project = await env.DB.prepare(`SELECT last_insert_rowid() as id`).first<{ id: number }>();
+    const projectId = project?.id;
+    if (!projectId) {
+      return new Response(JSON.stringify({ error: 'Failed to create project' }), { status: 500 });
+    }
+
+    // Upload jar to Backblaze B2 private bucket
+    const jarKey = `app/${projectId}.jar`;
+    const jarArrayBuffer = await jarFile.arrayBuffer();
+
+    try {
+      // Step 1: Authorize with B2
+      const authRes = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+        headers: {
+          'Authorization': `Basic ${btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`)}`
+        }
+      });
+
+      if (!authRes.ok) {
+        const errText = await authRes.text();
+        console.error(`B2 auth failed: ${errText}`);
+        throw new Error('B2 auth failed');
+      }
+
+      const authData = await authRes.json() as any;
+      const apiUrl = authData.apiUrl;
+      const authToken = authData.authorizationToken;
+
+      // Step 2: Get upload URL
+      const uploadUrlRes = await fetch(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
+        method: 'POST',
+        headers: { 'Authorization': authToken },
+        body: JSON.stringify({ bucketId: authData.bucketId })
+      });
+
+      if (!uploadUrlRes.ok) {
+        const errText = await uploadUrlRes.text();
+        console.error(`B2 get upload URL failed: ${errText}`);
+        throw new Error('Failed to get upload URL');
+      }
+
+      const uploadData = await uploadUrlRes.json() as any;
+
+      // Step 3: Upload file
+      const uploadRes = await fetch(uploadData.uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': uploadData.authorizationToken,
+          'X-Bz-File-Name': jarKey,
+          'Content-Type': 'application/java-archive',
+          'X-Bz-Content-Sha1': 'do_not_verify'
+        },
+        body: jarArrayBuffer
+      });
+
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text();
+        console.error(`B2 upload failed: ${errText}`);
+        throw new Error('B2 upload failed');
+      }
+
+      console.log(`B2 upload successful for project ${projectId}`);
+    } catch (e) {
+      console.error(`B2 upload error: ${e}`);
+      return new Response(JSON.stringify({ error: 'Failed to upload jar to storage' }), { status: 500 });
+    }
+
+    return new Response(JSON.stringify({ id: projectId, status: 'ready' }), {
+      headers: getCorsHeaders(request.headers.get('Origin'))
+    });
+  }
+
+  // Handle JSON requests (Pygame: class-based or direct standalone)
   const body = await request.json<{
     title: string;
     description: string;
-    class_id: number;
+    class_id?: number | null;
     work_type: string;
+    work: string; // code for standalone Pygame
     deploy_method: string | null;
   }>();
-  
-  const submission = await env.DB.prepare(`
-    SELECT s.id FROM submissions s
-    JOIN students_classes sc ON sc.class_id = s.class_id
-    WHERE s.work_type = ? AND sc.student_id = (
-      SELECT student_id FROM students_classes WHERE class_id = ?
-    )
-    ORDER BY s.id DESC LIMIT 1
-  `).bind(body.work_type, body.class_id).first<{ id: number }>();
-  
-  const submissionId = submission?.id || null;
-  
-  const uid = String(user.userId);
-  const result = await env.DB.prepare(`
-    INSERT INTO projects (account_id, submission_id, title, description, deploy_method, status)
-    SELECT ?, ?, ?, ?, ?, 'building'
-    WHERE EXISTS (
-      SELECT 1 FROM students s
-      JOIN students_classes sc ON sc.class_id = ?
-      WHERE s.id = sc.student_id AND (
-        s.account_id LIKE '%' || $1 || ',%' 
-        OR s.account_id LIKE '%,' || $1 || '}'
-        OR s.account_id = '{' || $1 || '}'
-      )
-    )
-  `).bind(user.userId, submissionId, body.title, body.description, body.deploy_method, body.class_id, uid).run();
-  
-  if (result.meta.changes === 0) {
-    return new Response(JSON.stringify({ error: 'No valid submission found' }), { status: 400 });
-  }
-  
-  const project = await env.DB.prepare(`
-    SELECT id FROM projects ORDER BY rowid DESC LIMIT 1
-  `).first<{ id: number }>();
 
-  if (project && submissionId) {
+  let submissionId: number | null = null;
+  let projectId: number | null = null;
+
+  // Direct standalone Pygame project (no class_id)
+  if (!body.class_id && body.work_type === 'standalone') {
+    // Create submission with null class_id
+    await env.DB.prepare(`
+      INSERT INTO submissions (work, work_type, account_id, class_id)
+      VALUES (?, 'standalone', ?, NULL)
+    `).bind(body.work, user.userId).run();
+
+    const sub = await env.DB.prepare(`SELECT last_insert_rowid() as id`).first<{ id: number }>();
+    submissionId = sub?.id || null;
+
+    // Insert project (no class access check needed for standalone)
+    await env.DB.prepare(`
+      INSERT INTO projects (account_id, submission_id, title, description, deploy_method, status)
+      VALUES (?, ?, ?, ?, ?, 'building')
+    `).bind(user.userId, submissionId, body.title, body.description, body.deploy_method).run();
+
+    const project = await env.DB.prepare(`SELECT last_insert_rowid() as id`).first<{ id: number }>();
+    projectId = project?.id;
+  } else {
+    // Existing class-based flow with access check
+    const submission = await env.DB.prepare(`
+      SELECT s.id FROM submissions s
+      JOIN students_classes sc ON sc.class_id = s.class_id
+      WHERE s.work_type = ? AND sc.student_id = (
+        SELECT student_id FROM students_classes WHERE class_id = ?
+      )
+      ORDER BY s.id DESC LIMIT 1
+    `).bind(body.work_type, body.class_id).first<{ id: number }>();
+    submissionId = submission?.id || null;
+
+    const uid = String(user.userId);
+    const result = await env.DB.prepare(`
+      INSERT INTO projects (account_id, submission_id, title, description, deploy_method, status)
+      SELECT ?, ?, ?, ?, ?, 'building'
+      WHERE EXISTS (
+        SELECT 1 FROM students s
+        JOIN students_classes sc ON sc.class_id = ?
+        WHERE s.id = sc.student_id AND (
+          s.account_id LIKE '%' || $1 || ',%' 
+          OR s.account_id LIKE '%,' || $1 || '}'
+          OR s.account_id = '{' || $1 || '}'
+        )
+      )
+    `).bind(user.userId, submissionId, body.title, body.description, body.deploy_method, body.class_id, uid).run();
+
+    if (result.meta.changes === 0) {
+      return new Response(JSON.stringify({ error: 'No valid submission found or unauthorized' }), { status: 400 });
+    }
+
+    const project = await env.DB.prepare(`SELECT last_insert_rowid() as id`).first<{ id: number }>();
+    projectId = project?.id;
+  }
+
+  if (!projectId) {
+    return new Response(JSON.stringify({ error: 'Failed to create project' }), { status: 500 });
+  }
+
+  // Trigger build server for Pygame projects
+  if (submissionId) {
     const subWork = await env.DB.prepare(`
       SELECT work FROM submissions WHERE id = ?
     `).bind(submissionId).first<{ work: string }>();
-    
+
     if (subWork?.work) {
-      console.log(`SubmitProject: Building project ${project.id} with code from submission ${submissionId}`);
-      
-      // Make synchronous call to build server and wait for response
+      console.log(`SubmitProject: Building project ${projectId} with code from submission ${submissionId}`);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 25000);
-      
       try {
         const buildRes = await fetch('https://iloveuvania.omraheja.me/build', {
           method: 'POST',
@@ -492,7 +614,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
             'Content-Type': 'application/json',
             'X-Build-Key': 'codeabode-build-secret-2026'
           },
-          body: JSON.stringify({ project_id: project.id, code: subWork.work }),
+          body: JSON.stringify({ project_id: projectId, code: subWork.work }),
           signal: controller.signal
         });
         clearTimeout(timeout);
@@ -501,12 +623,10 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
       } catch (e) {
         console.error(`SubmitProject: Build failed: ${e}`);
       }
-    } else {
-      console.log(`SubmitProject: No work found for submission ${submissionId}`);
     }
   }
 
-  return new Response(JSON.stringify({ id: project?.id, status: 'building' }), {
+  return new Response(JSON.stringify({ id: projectId, status: 'building' }), {
     headers: getCorsHeaders(request.headers.get('Origin'))
   });
 }
@@ -776,6 +896,45 @@ if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.metho
             }
           });
         } catch (e) {
+          return new Response('Not found', { status: 404 });
+        }
+      }
+
+      // Serve Java jars from Backblaze B2 (private bucket)
+      if (path.startsWith('/app/') && path.endsWith('.jar')) {
+        try {
+          const bucketName = env.B2_BUCKET_NAME || 'sigmaboy';
+          const fileName = path.slice(1); // remove leading /
+          
+          // Authorize with B2
+          const authRes = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+            headers: {
+              'Authorization': `Basic ${btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`)}`
+            }
+          });
+          
+          if (!authRes.ok) return new Response('Not found', { status: 404 });
+          const authData = await authRes.json() as any;
+          
+          // Download file using B2 API
+          const downloadUrl = `${authData.downloadUrl}/file/${bucketName}/${fileName}`;
+          const downloadRes = await fetch(downloadUrl, {
+            headers: { 'Authorization': authData.authorizationToken }
+          });
+          
+          if (!downloadRes.ok) return new Response('Not found', { status: 404 });
+          const body = await downloadRes.arrayBuffer();
+          
+          return new Response(body, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/java-archive',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=31536000',
+            }
+          });
+        } catch (e) {
+          console.error(`B2 download failed: ${e}`);
           return new Response('Not found', { status: 404 });
         }
       }

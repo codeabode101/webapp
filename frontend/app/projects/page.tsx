@@ -40,7 +40,15 @@ export default function ProjectsPage() {
 
   return (
     <div className="main-app">
-      <h1 className="text-3xl text-[var(--accent)] mb-6">Community Projects</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl text-[var(--accent)]">Community Projects</h1>
+        <Link
+          href="/projects/new"
+          className="px-4 py-2 rounded-lg font-semibold text-sm border border-[var(--accent)] text-[var(--accent)] bg-transparent hover:bg-[var(--accent)] hover:text-white transition-colors"
+        >
+          + New Project
+        </Link>
+      </div>
       {readyProjects.length === 0 ? (
         <p className="text-[var(--muted)]">No projects published yet. Be the first!</p>
       ) : (
