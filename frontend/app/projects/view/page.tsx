@@ -11,7 +11,7 @@ type Project = {
   status: string;
   deploy_method?: string;
   title: string;
-  author_name?: string;
+  author_name?: string | null;
   views: number;
   description: string;
   url?: string;

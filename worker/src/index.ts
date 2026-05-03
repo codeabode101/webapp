@@ -138,7 +138,7 @@ function getCorsHeaders(origin: string | null) {
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Build-Key',
     'Access-Control-Allow-Credentials': 'true',
-    'Content-Security-Policy': "worker-src 'self' blob: https://cjrtnc.leaningtech.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cjrtnc.leaningtech.com; connect-src 'self' https://cjrtnc.leaningtech.com blob: data:; default-src 'self' blob: data:; object-src 'self' https://*.r2.dev;",
+    'Content-Security-Policy': "worker-src 'self' blob: https://cjrtnc.leaningtech.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cjrtnc.leaningtech.com; connect-src 'self' https://api.codeabode.co https://cjrtnc.leaningtech.com blob: data:; default-src 'self' blob: data:; object-src 'self' https://*.r2.dev;",
   };
 }
 
