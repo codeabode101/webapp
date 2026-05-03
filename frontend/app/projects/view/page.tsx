@@ -15,6 +15,7 @@ type Project = {
   views: number;
   description: string;
   url?: string;
+  jar_url?: string;
 };
 
 function ProjectContent() {
@@ -26,35 +27,10 @@ function ProjectContent() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cheerpjReady, setCheerpjReady] = useState(false);
+
   const showBuilding = statusParam === 'pending' || project?.status === 'pending' || project?.status === 'building';
   const isJava = project?.deploy_method === 'java';
-
-  // Load CheerpJ for Java projects (must be before early returns)
-  useEffect(() => {
-    if (isJava && project?.status === 'ready') {
-      const script = document.createElement('script');
-      script.src = 'https://cjrtnc.leaningtech.com/4.3/loader.js';
-      script.onload = async () => {
-        try {
-          // @ts-expect-error CheerpJ is loaded globally
-          await cheerpjInit({ version: 17 });
-          const display = document.getElementById('cheerpj-display');
-          if (display) {
-            // @ts-expect-error CheerpJ types not installed
-            cheerpjCreateDisplay(800, 600, display);
-          }
-          // @ts-expect-error CheerpJ types not installed
-          await cheerpjRunJar(`/app/${project.id}.jar`);
-        } catch (e) {
-          console.error('CheerpJ init failed:', e);
-          setError('Failed to load Java game');
-        }
-      };
-      script.onerror = () => setError('Failed to load CheerpJ');
-      document.body.appendChild(script);
-      return () => { document.body.removeChild(script); };
-    }
-  }, [isJava, project?.status, project?.id]);
 
   useEffect(() => {
     setParentPath('/projects');
@@ -72,27 +48,74 @@ function ProjectContent() {
       return;
     }
 
-    // Fallback: fetch all projects (or a single project endpoint)
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/projects`, { credentials: 'include' })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/projects/${id}`, { credentials: 'include' })
       .then(res => res.json())
-      .then((allProjects: Project[]) => {
-        const found = allProjects.find(p => p.id === idNum);
-        if (found) {
-          setProject(found);
-        } else {
-          setError('Project not found');
-        }
-      })
+      .then(setProject)
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [id, getProject]);
 
-  // Increment view count if project is ready (optional)
   useEffect(() => {
     if (project && project.status === 'ready') {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/projects/${id}/view`, { method: 'POST', credentials: 'include' }).catch(() => {});
     }
   }, [project, id]);
+
+  // Load CheerpJ runtime once
+  useEffect(() => {
+    if (!isJava || project?.status !== 'ready') return;
+
+    const script = document.createElement('script');
+    script.src = 'https://cjrtnc.leaningtech.com/4.3/loader.js';
+    script.onload = async () => {
+      try {
+        // @ts-expect-error CheerpJ is loaded globally
+        await cheerpjInit({ version: 17 });
+        const display = document.getElementById('cheerpj-display');
+        if (display) {
+          const w = display.clientWidth || 800;
+          const h = display.clientHeight || 600;
+          // @ts-expect-error CheerpJ types not installed
+          cheerpjCreateDisplay(w, h, display);
+        }
+        setCheerpjReady(true);
+      } catch (e) {
+        console.error('CheerpJ init failed:', e);
+        setError('Failed to initialize CheerpJ: ' + (e instanceof Error ? e.message : String(e)));
+      }
+    };
+    script.onerror = () => setError('Failed to load CheerpJ script');
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, [isJava, project?.status]);
+
+  // Load and run the JAR using /str/ after CheerpJ is ready
+  useEffect(() => {
+    if (!cheerpjReady || !project) return;
+
+    (async () => {
+      try {
+        const jarUrl = project.jar_url || `https://api.codeabode.co/api/projects/${project.id}/jar`;
+        console.log('Fetching jar from:', jarUrl);
+
+        const response = await fetch(jarUrl, { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch JAR (' + response.status + ') from ' + jarUrl);
+
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        // @ts-expect-error CheerpJ types not installed
+        cheerpOSAddStringFile('/str/app.jar', uint8Array);
+
+        // @ts-expect-error CheerpJ types not installed
+        await cheerpjRunJar('/str/app.jar');
+      } catch (e) {
+        console.error('CheerpJ jar load failed:', e);
+        setError('Failed to load Java application: ' + (e instanceof Error ? e.message : String(e)));
+      }
+    })();
+  }, [cheerpjReady, project]);
 
   if (!id) return <div className="p-8 text-center">No project ID provided</div>;
   if (loading) return <div className="p-8 text-center">Loading project...</div>;
@@ -107,13 +130,13 @@ function ProjectContent() {
       </p>
       <p className="mb-4">{project.description}</p>
 
-{project.status === 'ready' ? (
+      {project.status === 'ready' ? (
         isJava ? (
-          <div className="border border-[var(--border)] rounded overflow-hidden aspect-video flex items-center justify-center">
+          <div className="border border-[var(--border)] rounded overflow-hidden flex items-start justify-center max-w-full">
             {error ? (
               <p className="text-red-400">{error}</p>
             ) : (
-              <div id="cheerpj-display" className="w-[800px] h-[600px]" />
+              <div id="cheerpj-display" className="w-full" />
             )}
           </div>
         ) : (

@@ -39,6 +39,20 @@ interface Token {
   expires_at: string;
 }
 
+interface Project {
+  id: number;
+  title: string;
+  description: string;
+  deploy_method: string | null;
+  status: string;
+  views: number;
+  submission_id: number | null;
+  created_at: string;
+  author_name?: string | null;
+  url?: string | null;
+  jar_url?: string | null;
+}
+
 function generateToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -428,7 +442,7 @@ async function getQuestions(request: Request, env: Env): Promise<Response> {
 async function submitProject(request: Request, env: Env): Promise<Response> {
   const user = await getUserFromRequest(request, env);
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: getCorsHeaders(request.headers.get('Origin')) });
   }
 
   const contentType = request.headers.get('Content-Type') || '';
@@ -441,10 +455,10 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
     const jarFile = form.get('jar') as File;
 
     if (!title || !jarFile) {
-      return new Response(JSON.stringify({ error: 'Missing title or jar file' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'Missing title or jar file' }), { status: 400, headers: getCorsHeaders(request.headers.get('Origin')) });
     }
     if (!jarFile.name.endsWith('.jar')) {
-      return new Response(JSON.stringify({ error: 'File must be a .jar' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'File must be a .jar' }), { status: 400, headers: getCorsHeaders(request.headers.get('Origin')) });
     }
 
     // Insert Java project
@@ -457,7 +471,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
     const project = await env.DB.prepare(`SELECT last_insert_rowid() as id`).first<{ id: number }>();
     const projectId = project?.id;
     if (!projectId) {
-      return new Response(JSON.stringify({ error: 'Failed to create project' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'Failed to create project' }), { status: 500, headers: getCorsHeaders(request.headers.get('Origin')) });
     }
 
     // Upload jar to Backblaze B2 private bucket
@@ -486,7 +500,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
       const uploadUrlRes = await fetch(`${apiUrl}/b2api/v2/b2_get_upload_url`, {
         method: 'POST',
         headers: { 'Authorization': authToken },
-        body: JSON.stringify({ bucketId: authData.bucketId })
+        body: JSON.stringify({ bucketId: env.B2_BUCKET_ID })
       });
 
       if (!uploadUrlRes.ok) {
@@ -518,7 +532,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
       console.log(`B2 upload successful for project ${projectId}`);
     } catch (e) {
       console.error(`B2 upload error: ${e}`);
-      return new Response(JSON.stringify({ error: 'Failed to upload jar to storage' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'Failed to upload jar to storage' }), { status: 500, headers: getCorsHeaders(request.headers.get('Origin')) });
     }
 
     return new Response(JSON.stringify({ id: projectId, status: 'ready' }), {
@@ -586,7 +600,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
     `).bind(user.userId, submissionId, body.title, body.description, body.deploy_method, body.class_id, uid).run();
 
     if (result.meta.changes === 0) {
-      return new Response(JSON.stringify({ error: 'No valid submission found or unauthorized' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'No valid submission found or unauthorized' }), { status: 400, headers: getCorsHeaders(request.headers.get('Origin')) });
     }
 
     const project = await env.DB.prepare(`SELECT last_insert_rowid() as id`).first<{ id: number }>();
@@ -594,7 +608,7 @@ async function submitProject(request: Request, env: Env): Promise<Response> {
   }
 
   if (!projectId) {
-    return new Response(JSON.stringify({ error: 'Failed to create project' }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Failed to create project' }), { status: 500, headers: getCorsHeaders(request.headers.get('Origin')) });
   }
 
   // Trigger build server for Pygame projects
@@ -637,6 +651,7 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
       p.id,
       p.title,
       p.description,
+      p.deploy_method,
       a.name as author_name,
       p.views,
       p.status,
@@ -650,6 +665,7 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
     id: number;
     title: string;
     description: string;
+    deploy_method: string | null;
     author_name: string | null;
     views: number;
     status: string;
@@ -657,10 +673,10 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
     created_at: string;
   }>();
   
-// Use absolute URL for static files (so they work in iframe on other domains)
   const result = projects.results.map(p => ({
     ...p,
-    url: p.status === 'ready' ? `https://api.codeabode.co/static/projects/${p.id}/build/web/index.html` : null,
+    url: p.status === 'ready' && p.deploy_method !== 'java' ? `https://api.codeabode.co/static/projects/${p.id}/build/web/index.html` : null,
+    jar_url: p.status === 'ready' && p.deploy_method === 'java' ? `https://api.codeabode.co/api/projects/${p.id}/jar` : null,
   }));
 
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
@@ -668,7 +684,7 @@ async function listProjects(env: Env, origin: string | null): Promise<Response> 
 
 async function getAllProjectsList(env: Env, origin: string | null): Promise<Response> {
   const projects = await env.DB.prepare(`
-    SELECT p.id, p.title, p.description, p.account_id, p.views, p.status, p.submission_id, p.created_at
+    SELECT p.id, p.title, p.description, p.deploy_method, p.account_id, p.views, p.status, p.submission_id, p.created_at
     FROM projects p
     ORDER BY p.created_at DESC
     LIMIT 20
@@ -676,6 +692,7 @@ async function getAllProjectsList(env: Env, origin: string | null): Promise<Resp
     id: number;
     title: string;
     description: string;
+    deploy_method: string | null;
     account_id: number | null;
     views: number;
     status: string;
@@ -683,10 +700,10 @@ async function getAllProjectsList(env: Env, origin: string | null): Promise<Resp
     created_at: string;
   }>();
   
-  // Use absolute URL for static files
   const result = projects.results.map(p => ({
     ...p,
-    url: p.status === 'ready' ? `https://api.codeabode.co/static/projects/${p.id}/build/web/index.html` : null,
+    url: p.status === 'ready' && p.deploy_method !== 'java' ? `https://api.codeabode.co/static/projects/${p.id}/build/web/index.html` : null,
+    jar_url: p.status === 'ready' && p.deploy_method === 'java' ? `https://api.codeabode.co/api/projects/${p.id}/jar` : null,
   }));
 
   return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
@@ -742,6 +759,79 @@ async function incrementProjectView(env: Env, id: number, origin: string | null)
   `).bind(id).run();
   
   return new Response(JSON.stringify('OK'), { headers: getCorsHeaders(origin) });
+}
+
+async function getProjectById(env: Env, id: number, origin: string | null): Promise<Response> {
+  const project = await env.DB.prepare(`
+    SELECT 
+      p.id, p.title, p.description, p.deploy_method, p.status, p.views, 
+      p.submission_id, p.created_at, a.name as author_name
+    FROM projects p
+    LEFT JOIN accounts a ON a.id = p.account_id
+    WHERE p.id = ?
+  `).bind(id).first<Project & { author_name?: string }>();
+
+  if (!project) {
+    return new Response(JSON.stringify({ error: 'Project not found' }), { 
+      status: 404, headers: getCorsHeaders(origin) 
+    });
+  }
+
+  const result = {
+    ...project,
+    url: project.status === 'ready' && project.deploy_method !== 'java' 
+      ? `https://api.codeabode.co/static/projects/${project.id}/build/web/index.html` 
+      : null,
+    jar_url: project.status === 'ready' && project.deploy_method === 'java'
+      ? `https://api.codeabode.co/api/projects/${project.id}/jar`
+      : null,
+  };
+
+  return new Response(JSON.stringify(result), { headers: getCorsHeaders(origin) });
+}
+
+async function getProjectJar(env: Env, id: number, origin: string | null): Promise<Response> {
+  const project = await env.DB.prepare(`
+    SELECT deploy_method FROM projects WHERE id = ?
+  `).bind(id).first<{ deploy_method: string }>();
+
+  if (!project || project.deploy_method !== 'java') {
+    return new Response(JSON.stringify({ error: 'Not a Java project' }), { 
+      status: 404, headers: getCorsHeaders(origin) 
+    });
+  }
+
+  try {
+    // Download from B2 private bucket
+    const authRes = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+      headers: {
+        'Authorization': `Basic ${btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`)}`
+      }
+    });
+    
+    if (!authRes.ok) return new Response('B2 auth failed', { status: 500 });
+    const authData = await authRes.json() as any;
+    
+    const downloadUrl = `${authData.downloadUrl}/file/${env.B2_BUCKET_NAME}/app/${id}.jar`;
+    const downloadRes = await fetch(downloadUrl, {
+      headers: { 'Authorization': authData.authorizationToken }
+    });
+    
+    if (!downloadRes.ok) return new Response('Jar not found', { status: 404 });
+    const body = await downloadRes.arrayBuffer();
+    
+    return new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/java-archive',
+        ...getCorsHeaders(origin),
+        'Cache-Control': 'public, max-age=31536000',
+      }
+    });
+  } catch (e) {
+    console.error(`Jar download failed: ${e}`);
+    return new Response('Failed to download jar', { status: 500 });
+  }
 }
 
 const PYTHON_COURSE = [
@@ -873,9 +963,21 @@ export default {
         return await updateProjectStatus(env, id, request, origin);
       }
       
-if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {
+ if (path.startsWith('/api/projects/') && path.endsWith('/view') && request.method === 'POST') {
         const id = parseInt(path.split('/')[3]);
         return await incrementProjectView(env, id, origin);
+      }
+
+      // GET single project
+      if (path.startsWith('/api/projects/') && request.method === 'GET' && !path.includes('/view') && !path.includes('/status') && !path.includes('/jar')) {
+        const id = parseInt(path.split('/')[3]);
+        return await getProjectById(env, id, origin);
+      }
+
+      // GET project jar
+      if (path.startsWith('/api/projects/') && path.endsWith('/jar') && request.method === 'GET') {
+        const id = parseInt(path.split('/')[3]);
+        return await getProjectJar(env, id, origin);
       }
 
       if (path === '/api/courses' && request.method === 'GET') {
